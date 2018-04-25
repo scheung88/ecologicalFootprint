@@ -15,17 +15,32 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(fitdistrplus)
+library(logspline)
 ```
 
-## Data 
+## Wrangling
+Countries:
 ```{r}
 countries <- read_csv("countries.csv") 
 names(countries) <- gsub(" ", "", names(countries)) 
 
 countries <- countries %>%
-  select(Country, Region, `Population(millions)`, GDPperCapita,
-         TotalEcologicalFootprint, TotalBiocapacity, 
-         BiocapacityDeficitorReserve) %>%
-  mutate(Indic = ifelse(BiocapacityDeficitorReserve < 0, 0, 1))
+  rename("country" = "Country", 
+         "region" = "Region",
+         "population" = "Population(millions)",
+         "netBiocap" = "BiocapacityDeficitorReserve") %>%
+  dplyr::select(country, region, population, GDPperCapita, netBiocap) %>%
+  mutate(expNetBiocap = exp(netBiocap))
+
+hist(countries$netBiocap)
+
+# Determine distribution of data
+descdist(countries$netBiocap, discrete = FALSE)
+fitBeta <- fitdist(countries$netBiocap, "beta")
+plot(fitBeta)
+
 ```
+
+## Visualizations
 
