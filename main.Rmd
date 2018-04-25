@@ -1,0 +1,65 @@
+---
+title: "Wrangling"
+author: "Shirley Cheung"
+date: "April 25, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries
+```{r, message = FALSE, warning = FALSE}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(fitdistrplus)
+library(logspline)
+```
+
+## Wrangling
+```{r}
+# Reading in ecological / biocapcity data
+biocapData <- read_csv("countries.csv") 
+names(biocapData ) <- gsub(" ", "", names(biocapData )) 
+
+# Selecting variables of interest
+biocapData  <- biocapData  %>%
+  rename("country" = "Country", 
+         "region" = "Region",
+         "population" = "Population(millions)",
+         "netBiocap" = "BiocapacityDeficitorReserve") %>%
+  dplyr::select(country, region, population, GDPperCapita, netBiocap) %>%
+  mutate(expNetBiocap = exp(netBiocap))
+
+# Determining distribution of Y
+# Our Y-variable = net biocapcity of each country
+hist(biocapData$netBiocap)
+descdist(biocapData$netBiocap, discrete = FALSE)
+
+# Looks like a beta distribution 
+# Solve for parameters, alpha and beta, from the summary mu and sd
+# Recall for the beta distribution
+## mu = alpha / (alpha + beta)
+## var = alpha*beta / [(alpha + beta)^2 (alpha + beta + 1)]
+parameters <- function(mu, var) {
+  alpha <- ((1 - mu)/var - 1/mu) * mu^2
+  beta <- alpha * (1/mu - 1)
+  return(params = list(alpha = alpha, beta = beta))
+}
+parameters(0.7020745, 11.77134^2)
+
+# Problem: we have negative values for alpha, beta
+# Also have negative values for our y's. Support of beta distribution
+# should only be in (0,1). Need to do a transformation? Or not beta
+# distribution. 
+
+# fitBeta <- fitdist(countries$netBiocap, "beta")
+# plot(fitBeta)
+
+```
+
+## Visualizations
+
