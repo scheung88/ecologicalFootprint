@@ -30,8 +30,11 @@ biocapData  <- biocapData  %>%
   rename("country" = "Country", 
          "region" = "Region",
          "population" = "Population(millions)",
+         "totalFootprint" = "TotalEcologicalFootprint",
+         "totalBiocap" = "TotalBiocapacity",
          "netBiocap" = "BiocapacityDeficitorReserve") %>%
-  dplyr::select(country, region, population, GDPperCapita, netBiocap) %>%
+  dplyr::select(country, region, population, GDPperCapita, 
+                totalFootprint, totalBiocap, netBiocap) %>%
   mutate(expNetBiocap = exp(netBiocap))
 
 # Determining distribution of Y
@@ -59,6 +62,13 @@ parameters(0.7020745, 11.77134^2)
 # fitBeta <- fitdist(countries$netBiocap, "beta")
 # plot(fitBeta)
 
+# Y = total biocapcity
+hist(biocapData$totalBiocap)
+descdist(biocapData$totalBiocap, discrete = FALSE)
+
+# Y = total footprint
+hist(biocapData$totalFootprint)
+descdist(biocapData$totalFootprint, discrete = FALSE)
 ```
 
 ## Visualizations
