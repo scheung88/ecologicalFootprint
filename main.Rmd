@@ -157,7 +157,6 @@ ecoData <- ecoData %>%
 
 #convert categorical into numeric
 write_csv(ecoData, "ecoData.csv")
-
 ```
 
 ## Regression 
@@ -206,8 +205,8 @@ plot(tree_model_cv$size, sqrt(tree_model_cv$dev / nrow(ecoData)), type = "b",
 ```{r}
 # Determining distribution of Y
 # Our Y-variable = net biocapcity of each country
-hist(ecoData$netBiocap)
-descdist(ecoData$netBiocap, discrete = FALSE)
+hist(log(ecoData$netFootprint))
+descdist(log(ecoData$netFootprint + 15), discrete = FALSE)
 
 # Looks like a beta distribution 
 # Solve for parameters, alpha and beta, from the summary mu and sd
