@@ -145,12 +145,13 @@ HDI$Country[HDI$`2015` == 0.474] <- "Ivory Coast"
 # Finding countries in common that won't join because of spelling
 spellingErrors2 <- anti_join(ecoData, HDI, 
                             by = c("country" = "Country"))
-
 ecoData <- ecoData %>%
   left_join(HDI, by = c("country" = "Country")) %>% 
-  dplyr::select(-year, -value) %>% 
-  drop_na()
+  dplyr::select(-year, -value, -`Area Abbreviation`) %>%
+  drop_na() %>%
+  mutate(region = unclass(as.factor(continent)))
 
+#convert categorical into numeric
 write_csv(ecoData, "ecoData.csv")
 
 ```
