@@ -118,7 +118,41 @@ ecoData <- ecoData %>%
 
 ### HDI Data
 ```{r}
-HDI <- read_csv("HDI.csv")
+HDI <- read_csv("HDI.csv") %>% 
+  dplyr::select(Country, `2015`) %>%
+  mutate(Country = recode(Country,
+         "Antigua and Barbuda" = "Antigua", 
+         "Bolivia (Plurinational State of)" = "Bolivia",
+         "Brunei Darussalam" = "Brunei", 
+         "Cabo Verde" = "Cape Verde",
+         "Iran (Islamic Republic of)" = "Iran",
+         "Lao People's Democratic Republic" = "Laos",
+         "Libya" = "Libyan Arab Jamahiriya",
+         "Russian Federation" = "Russia",
+         "Saint Kitts and Nevis" = "Saint Kitts", 
+         "Saint Vincent and the Grenadines" = "Saint Vincent", 
+         "Viet Nam" = "Vietnam",
+         "United Kingdom" = "UK",
+         "United States" = "USA",
+         "Venezuela (Bolivarian Republic of)" = "Venezuela",
+         "Trinidad and Tobago" = "Trinidad",
+         "Tanzania (United Republic of)" = "Tanzania",
+         "Congo (Democratic Republic of the)" = "Democratic Republic of the Congo")
+  )
+  
+HDI$Country[HDI$`2015` == 0.474] <- "Ivory Coast"
+
+# Finding countries in common that won't join because of spelling
+spellingErrors2 <- anti_join(ecoData, HDI, 
+                            by = c("country" = "Country"))
+
+ecoData <- ecoData %>%
+  left_join(HDI, by = c("country" = "Country")) %>% 
+  dplyr::select(-year, -value) %>% 
+  drop_na()
+
+write_csv(ecoData, "ecoData.csv")
+
 ```
 
 ## Fitting Distribution
