@@ -20,6 +20,11 @@ library(logspline)
 ```
 
 ## Wrangling
++ biocapcity data is 2016
++ regional data is 2013
++ greenhouse data is 2013
+
+### Eco / Biocapacity Data
 ```{r, message = FALSE, warning = FALSE}
 # Reading in eco dataset
 ecoData <- read_csv("countries.csv") 
@@ -37,7 +42,10 @@ ecoData  <- ecoData  %>%
                 totalFootprint, totalBiocap, netFootprint) %>%
   mutate(GDPperCapita = 
            str_replace_all(GDPperCapita, c("[:punct:]" = "", "\\$" = "")))
+```
 
+### Regional Data
+```{r}
 # Reading in regional data
 ## Final regional dataset is total food production by country in 2013
 regional <- read_csv("regional.csv") %>%
@@ -84,6 +92,35 @@ ecoData <- ecoData %>%
   rename("continent" = "region.y")
 ```
 
+### Greenhouse Data
+```{r}
+# Reading in greenhouse gas dataset
+greenhouse <- read_csv("greenhouseGas.csv") %>%
+  dplyr::select(-category) %>%
+  filter(year == 2013) %>%
+  distinct(country_or_area, .keep_all = TRUE) # iceland was observed twice
+
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(greenhouse, ecoData, 
+                            by = c("country_or_area" = "country"))
+
+# Fixing names
+greenhouse <- greenhouse %>%
+  mutate(country_or_area = recode(country_or_area, 
+                                  "Russian Federation" = "Russia",
+                                  "United Kingdom" = "UK",
+                                  "United States of America" = "USA"))
+
+# Merging greenhouse gas dataset with eco dataset
+ecoData <- ecoData %>%
+  left_join(greenhouse, by = c("country" = "country_or_area"))
+```
+
+### HDI Data
+```{r}
+HDI <- read_csv("HDI.csv")
+```
+
 ## Fitting Distribution
 ```{r}
 # Determining distribution of Y
@@ -123,8 +160,9 @@ descdist(ecoData$totalFootprint, discrete = FALSE)
 ## Visualizations
 ```{r}
 # Can you recycle code from project 3 and make another chloropleth map
-# where countries are filled in with their net bio capacity?
-
+# of the entire world where countries are filled in with their net 
+# bio capacity? can test continuous case and then also categorical case where 
+# we color by whether it's deficit or reserve
 
 ```
 
