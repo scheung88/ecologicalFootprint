@@ -20,27 +20,76 @@ library(logspline)
 ```
 
 ## Wrangling
-```{r}
-# Reading in ecological / biocapcity data
-biocapData <- read_csv("countries.csv") 
-names(biocapData ) <- gsub(" ", "", names(biocapData )) 
+```{r, message = FALSE, warning = FALSE}
+# Reading in eco dataset
+ecoData <- read_csv("countries.csv") 
+names(ecoData ) <- gsub(" ", "", names(ecoData )) 
 
-# Selecting variables of interest
-biocapData  <- biocapData  %>%
+# Cleaning up eco dataset
+ecoData  <- ecoData  %>%
   rename("country" = "Country", 
          "region" = "Region",
          "population" = "Population(millions)",
          "totalFootprint" = "TotalEcologicalFootprint",
          "totalBiocap" = "TotalBiocapacity",
-         "netBiocap" = "BiocapacityDeficitorReserve") %>%
+         "netFootprint" = "BiocapacityDeficitorReserve") %>%
   dplyr::select(country, region, population, GDPperCapita, 
-                totalFootprint, totalBiocap, netBiocap) %>%
-  mutate(expNetBiocap = exp(netBiocap))
+                totalFootprint, totalBiocap, netFootprint) %>%
+  mutate(GDPperCapita = 
+           str_replace_all(GDPperCapita, c("[:punct:]" = "", "\\$" = "")))
 
+# Reading in regional data
+## Final regional dataset is total food production by country in 2013
+regional <- read_csv("regional.csv") %>%
+  replace_na(list(region = "NA")) %>%
+  group_by(Area, Year) %>%
+  mutate(totalProduction = sum(Production)) %>%
+  filter(Year == 2013) %>%
+  ungroup() %>%
+  distinct(Area, .keep_all = TRUE) %>%
+  dplyr::select('Area Abbreviation', Area, region, totalProduction)
+
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(ecoData, regional, by = c("country" = "Area")) 
+
+# Merging regional and eco data
+ecoData <- ecoData %>%
+  mutate(country = recode(country, 
+                          "Antigua and Barbuda" = "Antigua",
+                          "Brunei Darussalam" = "Brunei",
+                          "Cabo Verde" = "Cape Verde",
+                          "Congo" = "Democratic Republic of the Congo",
+                          "Congo, Democratic Republic of" =
+                            "Democratic Republic of the Congo",
+                          "Côte d'Ivoire" = "Ivory Coast",
+                          "Equatorial Guinea" = "Guinea",
+                          "Iran, Islamic Republic of" = "Iran",
+                          "Korea, Democratic People's Republic of" =
+                            "South Korea",
+                          "Korea, Republic of" = "South Korea",
+                          "Lao People's Democratic Republic" = "Laos",
+                          "Macedonia TFYR" = "Macedonia",
+                          "Russian Federation" = "Russia",
+                          "Saint Kitts and Nevis" = "Saint Kitts",
+                          "Saint Vincent and Grenadines" = "Saint Vincent",
+                          "Syrian Arab Republic" = "Syria",
+                          "Tanzania, United Republic of" = "Tanzania",
+                          "Trinidad and Tobago" = "Trinidad",
+                          "United Kingdom" = "UK",
+                          "United States of America" = "USA",
+                          "Venezuela, Bolivarian Republic of" = "Venezuela",
+                          "Viet Nam" = "Vietnam")) %>%
+  left_join(regional, by = c("country" = "Area")) %>%
+  dplyr::select(-region.x) %>%
+  rename("continent" = "region.y")
+```
+
+## Fitting Distribution
+```{r}
 # Determining distribution of Y
 # Our Y-variable = net biocapcity of each country
-hist(biocapData$netBiocap)
-descdist(biocapData$netBiocap, discrete = FALSE)
+hist(ecoData$netBiocap)
+descdist(ecoData$netBiocap, discrete = FALSE)
 
 # Looks like a beta distribution 
 # Solve for parameters, alpha and beta, from the summary mu and sd
@@ -63,13 +112,20 @@ parameters(0.7020745, 11.77134^2)
 # plot(fitBeta)
 
 # Y = total biocapcity
-hist(biocapData$totalBiocap)
-descdist(biocapData$totalBiocap, discrete = FALSE)
+hist(ecoData$totalBiocap)
+descdist(ecoData$totalBiocap, discrete = FALSE)
 
 # Y = total footprint
-hist(biocapData$totalFootprint)
-descdist(biocapData$totalFootprint, discrete = FALSE)
+hist(ecoData$totalFootprint)
+descdist(ecoData$totalFootprint, discrete = FALSE)
 ```
 
 ## Visualizations
+```{r}
+# Can you recycle code from project 3 and make another chloropleth map
+# where countries are filled in with their net bio capacity?
+
+
+```
+
 
