@@ -16,7 +16,9 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(fitdistrplus)
-library(logspline)
+library(lme4)
+library(tree)
+
 ```
 
 ## Wrangling
@@ -149,11 +151,55 @@ ecoData <- ecoData %>%
   left_join(HDI, by = c("country" = "Country")) %>% 
   dplyr::select(-year, -value, -`Area Abbreviation`) %>%
   drop_na() %>%
-  mutate(region = unclass(as.factor(continent)))
+  mutate(region = unclass(as.factor(continent)),
+         BinnetFootprint = as.numeric(netFootprint >= 0)
+         ) 
 
 #convert categorical into numeric
 write_csv(ecoData, "ecoData.csv")
 
+```
+
+## Regression 
+```{r}
+#normalizing the data
+ecoData <- ecoData %>% 
+  mutate(GDPperCapita = as.numeric(GDPperCapita)) %>%
+  mutate_at(.vars = vars(population, totalProduction, GDPperCapita, `2015`), .funs = scale)
+#Reference: https://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet
+
+# We are using these two models? Right now my simple understanding is that 
+# V1 ~ (1|V2) + V3 + (0+V3|V2)
+
+# V1 ~ (1+V3|V2) + V3
+
+#first model is varying intercept
+mixed.lmer <- lmer(log(netFootprint+15) ~ (1 + population|region) + (1 + totalProduction|region) + population + totalProduction, data = ecoData)
+summary(mixed.lmer)
+plot(mixed.lmer)
+
+
+mixed.lmer2 <- lmer(log(netFootprint+15) ~ (1|region) + totalProduction + (0 + totalProduction|region) + population + (0 + population|region), data = ecoData)
+summary(mixed.lmer2)
+plot(mixed.lmer2)
+
+# There are three kinds: varying intercept, varying slope, and both.
+set.seed(42)
+boston_idx = sample(1:nrow(Boston), nrow(Boston) / 2)
+boston_trn = Boston[boston_idx,]
+boston_tst = Boston[-boston_idx,]
+
+# First we try regression trees
+
+tree.model <- tree(log(netFootprint+15) ~ region + population + GDPperCapita + totalProduction, data=ecoData)
+summary(tree.model)
+
+plot(tree.model)
+text(tree.model, cex=.75)
+
+tree_model_cv = cv.tree(tree.model)
+plot(tree_model_cv$size, sqrt(tree_model_cv$dev / nrow(ecoData)), type = "b",
+     xlab = "Tree Size", ylab = "CV-RMSE")
 ```
 
 ## Fitting Distribution
@@ -198,7 +244,11 @@ descdist(ecoData$totalFootprint, discrete = FALSE)
 # of the entire world where countries are filled in with their net 
 # bio capacity? can test continuous case and then also categorical case where 
 # we color by whether it's deficit or reserve
-
+ggplot(aes(population, netFootprint), data = ecoData) + 
+  geom_point() + 
+  facet_wrap(~ continent) + 
+  xlab("length") + 
+  ylab("test score")
 ```
 
 
