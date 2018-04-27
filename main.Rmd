@@ -179,7 +179,8 @@ HDI$Country[HDI$HDI2015 == 0.474] <- "Ivory Coast"
 ecoData <- ecoData %>%
   left_join(HDI, by = c("country" = "Country")) %>%
   drop_na() %>%
-  mutate(binomFootprint = ifelse(netFootprint < 0, 0, 1))
+  mutate(binomFootprint = ifelse(netFootprint < 0, 0, 1)) %>%
+  mutate(transFootprint = log(netFootprint + 15))
 
 # Saving our final ecoData
 write_csv(ecoData, "ecoData.csv")
