@@ -1,0 +1,52 @@
+---
+title: "Viz"
+author: "Tuan Nguyen"
+date: "4/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(scales)
+library(ggplot2)
+library(readr)
+library(dplyr)
+
+ecoData <- read_csv("ecoData.csv")
+ecoDataReg <- read_csv("ecoDataReg.csv") %>% 
+  mutate_at(.vars = c("population", "GDPperCapita", "totalProduction", "totalGHG", "HDI2015"), .funs = funs( as.numeric(scale(.) )))
+
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = as.factor(binomFootprint), group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = transFootprint, group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+
+ggplot(aes(x = transFootprint), data = ecoDataReg) + 
+  geom_density() + 
+  facet_wrap(~ continent)
+
+ggplot(aes(x=HDI2015,y=netFootprint,colour=continent), data = ecoDataReg)+
+  geom_point()+
+  geom_smooth(method="lm",alpha=0.3)+
+    ## oob=squish retains the (truncated) confidence bands;
+    ## otherwise bands that went outside the limits would disappear
+    ## (requires the 'scales' package be loaded)
+    scale_y_continuous(limits=c(-150,400),oob=squish)+
+    scale_colour_discrete(guide="none") ## suppress legend
+
+```
+

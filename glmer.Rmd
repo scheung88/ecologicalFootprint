@@ -1,0 +1,54 @@
+---
+title: "glmer"
+author: "Tuan Nguyen"
+date: "4/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Regression 
+library(readr)
+library(lme4)
+library(dplyr)
+library(car)
+
+#normalize data
+ecoDataReg <- read_csv("ecoDataReg.csv") %>% 
+  mutate_at(.vars = c("population", "GDPperCapita", "totalProduction", "totalGHG", "HDI2015"), .funs = funs( as.numeric(scale(.) )))
+
+#Reference: https://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet
+
+# We are using these two models? Right now my simple understanding is that 
+
+# V1 ~ (1|V2) + V3 + (0+V3|V2)
+
+# V1 ~ (1+V3|V2) + V3
+
+#first model is varying intercept
+lmer1 <- lmer(log(netFootprint+15) ~ (1 + population|continent) + (1 + totalProduction|continent) + (1 + GDPperCapita|continent) + (1 + HDI2015|continent) + population + totalProduction + GDPperCapita + HDI2015, data = ecoDataReg)
+summary(lmer1)
+plot(lmer1)
+Anova(lmer1)
+
+lmer2 <- lmer(log(netFootprint+15) ~ (1|continent) + totalProduction + (0 + totalProduction|continent) + population + (0 + population|continent) + GDPperCapita + (0 + GDPperCapita|continent) + HDI2015 + (0 + HDI2015|continent), data = ecoDataReg)
+summary(lmer2)
+plot(lmer2)
+Anova(lmer2)
+
+anova(lmer1, lmer2)
+
+glmer1 <- glmer(binomFootprint ~ (1 + population|continent) + (1 + totalProduction|continent) + (1 + GDPperCapita|continent) + (1 + HDI2015|continent) + population + totalProduction + GDPperCapita + HDI2015, data = ecoDataReg, family = binomial(link = "logit"))  
+summary(glmer1)
+plot(glmer1)
+
+glmer2 <- glmer(log(netFootprint+15) ~ (1 + population|continent) + (1 + totalProduction|continent) + (1 + GDPperCapita|continent) + (1 + HDI2015|continent) + population + totalProduction + GDPperCapita + HDI2015, data = ecoDataReg, family = gaussian(link = "identity"))  
+summary(glmer2)
+plot(glmer2)
+
+#not sure how to compare the 2 glmer
+```
+

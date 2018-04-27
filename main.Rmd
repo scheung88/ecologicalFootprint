@@ -9,17 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Libraries
-```{r, message = FALSE, warning = FALSE}
-library(readr)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(ggmap)
-library(fitdistrplus)
-library(lme4)
-```
-
 ## Wrangling
 + biocapcity data is 2016
 + regional data is 2013
@@ -30,6 +19,7 @@ library(lme4)
 library(readr)
 library(rvest)
 library(ggmap)
+library(ggplot2)
 library(ggthemes)
 library(maps)
 library(plotly)
@@ -37,6 +27,8 @@ library(leaflet)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(fitdistrplus)
+library(lme4)
 ```
 
 ### Eco / Biocapacity Data
@@ -275,38 +267,6 @@ write_csv(ecoData, "ecoData.csv")
 write_csv(ecoDataReg, "ecoDataReg.csv")
 ```
 
-## Regression 
-```{r, eval=FALSE}
-#normalizing the data
-ecoData <- ecoData %>% 
-  mutate(GDPperCapita = as.numeric(GDPperCapita)) %>%
-  mutate_at(.vars = vars(population, totalProduction, GDPperCapita, `2015`), .funs = scale)
-#Reference: https://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet
-
-# We are using these two models? Right now my simple understanding is that 
-# V1 ~ (1|V2) + V3 + (0+V3|V2)
-
-# V1 ~ (1+V3|V2) + V3
-
-#first model is varying intercept
-mixed.lmer <- lmer(log(netFootprint+15) ~ (1 + population|region) + (1 + totalProduction|region) + population + totalProduction, data = ecoData)
-summary(mixed.lmer)
-plot(mixed.lmer)
-
-
-mixed.lmer2 <- lmer(log(netFootprint+15) ~ (1|region) + totalProduction + (0 + totalProduction|region) + population + (0 + population|region), data = ecoData)
-summary(mixed.lmer2)
-plot(mixed.lmer2)
-
-# There are three kinds: varying intercept, varying slope, and both.
-set.seed(42)
-boston_idx = sample(1:nrow(Boston), nrow(Boston) / 2)
-boston_trn = Boston[boston_idx,]
-boston_tst = Boston[-boston_idx,]
-
-
-```
-
 ## Fitting Distribution
 ```{r, eval=FALSE}
 # Determining distribution of Y
@@ -342,49 +302,4 @@ descdist(ecoData$totalBiocap, discrete = FALSE)
 hist(ecoData$totalFootprint)
 descdist(ecoData$totalFootprint, discrete = FALSE)
 ```
-
-## Visualizations
-```{r}
-# Can you recycle code from project 3 and make another chloropleth map
-# of the entire world where countries are filled in with their net 
-# bio capacity? can test continuous case and then also categorical case where 
-# we color by whether it's deficit or reserve
-world <- map_data("world")
-
-# Dataset 1 rendered from user-specifed input
-mapData <- ecoData %>%
-  left_join(world, by = c("country" = "region"))
-
-# Visualization 1
-# Need to create title that updates with user input
-ggplot() + 
-  geom_polygon(data = mapData, 
-               aes(x = long, y = lat, fill = binomFootprint, group = group),
-               col = "white") +
-  xlab("") +
-  ylab("") +
-  theme_minimal()
-
-ggplot() + 
-  geom_polygon(data = mapData, 
-               aes(x = long, y = lat, fill = transFootprint, group = group),
-               col = "white") +
-  xlab("") +
-  ylab("") +
-  theme_minimal()
-
-ggplot(aes(population, transFootprint), data = ecoData) + 
-  geom_point() + 
-  facet_wrap(~ continent) + 
-  xlab("population") + 
-  ylab("transFootprint")
-
-ggplot(aes(population, binomFootprint), data = ecoData) + 
-  geom_point() + 
-  facet_wrap(~ continent) + 
-  xlab("population") + 
-  ylab("binomFootprint")
-
-```
-
 
