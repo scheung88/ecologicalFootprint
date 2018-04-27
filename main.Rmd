@@ -103,27 +103,40 @@ ecoData <- ecoData %>%
 ```
 
 ### Greenhouse Data
++ 2012 Greenhouse Data
 ```{r}
 # Reading in greenhouse gas dataset
-greenhouse <- read_csv("greenhouseGas.csv") %>%
-  dplyr::select(-category) %>%
-  filter(year == 2013) %>%
-  distinct(country_or_area, .keep_all = TRUE) # iceland was observed twice
-
+greenhouse <- read_csv("CAITGHGData.csv") %>%
+  filter(Year == 2012) %>%
+  rename("totalGHG" = `Total GHG Emissions Including Land-Use Change and Forestry (MtCO?e?)`) %>%
+  dplyr::select(Country, totalGHG)
+  
 # Finding countries in common that won't join because of spelling
 spellingErrors <- anti_join(greenhouse, ecoData, 
-                            by = c("country_or_area" = "country"))
+                            by = c("Country" = "country"))
 
 # Fixing names
 greenhouse <- greenhouse %>%
-  mutate(country_or_area = recode(country_or_area, 
-                                  "Russian Federation" = "Russia",
-                                  "United Kingdom" = "UK",
-                                  "United States of America" = "USA"))
+  mutate(Country = recode(Country,
+                          "Antigua & Barbuda" = "Antigua",
+                          "Bahamas, The" = "Bahamas",
+                          "Bosnia & Herzegovina" = "Bosnia and Herzegovina",
+                          "Congo, Dem. Rep." = 
+                            "Democratic Republic of the Congo",
+                          "Cote d'Ivoire" = "Ivory Coast",
+                          "Korea, Rep. (South)" = "South Korea",
+                          "Korea, Dem. Rep. (North)" = "North Korea",
+                          "Macedonia, FYR" = "Macedonia",
+                          "Russian Federation" = "Russia",
+                          "Saint Kitts & Nevis" = "Saint Kitts",
+                          "Saint Vincent & Grenadines" = "Saint Vincent",
+                          "Trinidad & Tobago" = "Trinidad",
+                          "United Kingdom" = "UK",
+                          "United States of America" = "USA"))
 
 # Merging greenhouse gas dataset with eco dataset
 ecoData <- ecoData %>%
-  left_join(greenhouse, by = c("country" = "country_or_area"))
+  left_join(greenhouse, by = c("country" = "Country"))
 ```
 
 ### Human Development Index Data
@@ -167,11 +180,6 @@ ecoData <- ecoData %>%
   left_join(HDI, by = c("country" = "Country")) %>%
   drop_na() %>%
   mutate(binomFootprint = ifelse(netFootprint < 0, 0, 1))
-  
-# Don't think we need this - can just use ifelse statement 
-# mutate(region = unclass(as.factor(continent)),
-         ##BinnetFootprint = as.numeric(netFootprint >= 0)
-         ##) 
 
 # Saving our final ecoData
 write_csv(ecoData, "ecoData.csv")
