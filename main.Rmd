@@ -5,7 +5,7 @@ date: "April 25, 2018"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -18,7 +18,6 @@ library(stringr)
 library(fitdistrplus)
 library(lme4)
 library(tree)
-
 ```
 
 ## Wrangling
@@ -27,7 +26,7 @@ library(tree)
 + greenhouse data is 2013
 
 ### Eco / Biocapacity Data
-```{r, message = FALSE, warning = FALSE}
+```{r}
 # Reading in eco dataset
 ecoData <- read_csv("countries.csv") 
 names(ecoData ) <- gsub(" ", "", names(ecoData )) 
@@ -40,29 +39,40 @@ ecoData  <- ecoData  %>%
          "totalFootprint" = "TotalEcologicalFootprint",
          "totalBiocap" = "TotalBiocapacity",
          "netFootprint" = "BiocapacityDeficitorReserve") %>%
-  dplyr::select(country, region, population, GDPperCapita, 
-                totalFootprint, totalBiocap, netFootprint) %>%
+  dplyr::select(country, region, population, GDPperCapita, netFootprint) %>%
   mutate(GDPperCapita = 
-           str_replace_all(GDPperCapita, c("[:punct:]" = "", "\\$" = "")))
+           str_replace_all(GDPperCapita, 
+                           c("[:punct:]" = "", "\\$" = ""))) %>%
+  mutate(GDPperCapita = as.numeric(GDPperCapita))
+
+# Finding duplicates
+table(ecoData$country)
+
+# Removing duplicates
+## Kept the observation with more data / entries that made more sense
+ecoData <- ecoData %>%
+  filter(!(country %in% c("Korea, Democratic People's Republic of",
+                      "Congo", "Guinea")))
 ```
 
-### Regional Data
+### Production Data
++ Adds total food production by country in 2013
 ```{r}
 # Reading in regional data
 ## Final regional dataset is total food production by country in 2013
-regional <- read_csv("regional.csv") %>%
+production <- read_csv("regional.csv") %>%
   replace_na(list(region = "NA")) %>%
   group_by(Area, Year) %>%
-  mutate(totalProduction = sum(Production)) %>%
+  mutate(totalProduction = as.numeric(sum(Production))) %>%
   filter(Year == 2013) %>%
   ungroup() %>%
   distinct(Area, .keep_all = TRUE) %>%
   dplyr::select('Area Abbreviation', Area, region, totalProduction)
 
 # Finding countries in common that won't join because of spelling
-spellingErrors <- anti_join(ecoData, regional, by = c("country" = "Area")) 
+spellingErrors <- anti_join(ecoData, production, by = c("country" = "Area")) 
 
-# Merging regional and eco data
+# Fixing names and merging with production data
 ecoData <- ecoData %>%
   mutate(country = recode(country, 
                           "Antigua and Barbuda" = "Antigua",
@@ -72,12 +82,10 @@ ecoData <- ecoData %>%
                           "Congo, Democratic Republic of" =
                             "Democratic Republic of the Congo",
                           "Côte d'Ivoire" = "Ivory Coast",
-                          "Equatorial Guinea" = "Guinea",
                           "Iran, Islamic Republic of" = "Iran",
-                          "Korea, Democratic People's Republic of" =
-                            "South Korea",
                           "Korea, Republic of" = "South Korea",
                           "Lao People's Democratic Republic" = "Laos",
+                          "Libyan Arab Jamahiriya" = "Libya",
                           "Macedonia TFYR" = "Macedonia",
                           "Russian Federation" = "Russia",
                           "Saint Kitts and Nevis" = "Saint Kitts",
@@ -89,7 +97,7 @@ ecoData <- ecoData %>%
                           "United States of America" = "USA",
                           "Venezuela, Bolivarian Republic of" = "Venezuela",
                           "Viet Nam" = "Vietnam")) %>%
-  left_join(regional, by = c("country" = "Area")) %>%
+  left_join(production, by = c("country" = "Area")) %>%
   dplyr::select(-region.x) %>%
   rename("continent" = "region.y")
 ```
@@ -118,9 +126,16 @@ ecoData <- ecoData %>%
   left_join(greenhouse, by = c("country" = "country_or_area"))
 ```
 
-### HDI Data
+### Human Development Index Data
 ```{r}
-HDI <- read_csv("HDI.csv") %>% 
+# Reading in HDI data
+HDI <- read_csv("HDI.csv")
+
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(ecoData, HDI, by = c("country" = "Country"))
+
+# Fixing spelling errors
+HDI <- HDI %>%
   dplyr::select(Country, `2015`) %>%
   mutate(Country = recode(Country,
          "Antigua and Barbuda" = "Antigua", 
@@ -129,7 +144,7 @@ HDI <- read_csv("HDI.csv") %>%
          "Cabo Verde" = "Cape Verde",
          "Iran (Islamic Republic of)" = "Iran",
          "Lao People's Democratic Republic" = "Laos",
-         "Libya" = "Libyan Arab Jamahiriya",
+         "Libyan Arab Jamahiriya" = "Libya",
          "Russian Federation" = "Russia",
          "Saint Kitts and Nevis" = "Saint Kitts", 
          "Saint Vincent and the Grenadines" = "Saint Vincent", 
@@ -139,23 +154,26 @@ HDI <- read_csv("HDI.csv") %>%
          "Venezuela (Bolivarian Republic of)" = "Venezuela",
          "Trinidad and Tobago" = "Trinidad",
          "Tanzania (United Republic of)" = "Tanzania",
-         "Congo (Democratic Republic of the)" = "Democratic Republic of the Congo")
-  )
-  
-HDI$Country[HDI$`2015` == 0.474] <- "Ivory Coast"
+         "Congo (Democratic Republic of the)" = 
+           "Democratic Republic of the Congo",
+         "The former Yugoslav Republic of Macedonia" = "Macedonia", 
+         "Korea (Republic of)" = "South Korea",
+         "Syrian Arab Republic" = "Syria")) %>%
+  rename("HDI2015" = `2015`)
+HDI$Country[HDI$HDI2015 == 0.474] <- "Ivory Coast"
 
-# Finding countries in common that won't join because of spelling
-spellingErrors2 <- anti_join(ecoData, HDI, 
-                            by = c("country" = "Country"))
+# Merging with HDI data
 ecoData <- ecoData %>%
-  left_join(HDI, by = c("country" = "Country")) %>% 
-  dplyr::select(-year, -value, -`Area Abbreviation`) %>%
+  left_join(HDI, by = c("country" = "Country")) %>%
   drop_na() %>%
-  mutate(region = unclass(as.factor(continent)),
-         BinnetFootprint = as.numeric(netFootprint >= 0)
-         ) 
+  mutate(binomFootprint = ifelse(netFootprint < 0, 0, 1))
+  
+# Don't think we need this - can just use ifelse statement 
+# mutate(region = unclass(as.factor(continent)),
+         ##BinnetFootprint = as.numeric(netFootprint >= 0)
+         ##) 
 
-#convert categorical into numeric
+# Saving our final ecoData
 write_csv(ecoData, "ecoData.csv")
 ```
 
