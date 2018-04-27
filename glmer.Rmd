@@ -26,14 +26,16 @@ ecoDataReg <- read_csv("ecoDataReg.csv")
 ```{r}
 # Normal - Normal Hierarchy
 normalNormal <- lmer(transFootprint ~ (1|continent) + 
-                       population + 
-                       totalProduction +
-                       GDPperCapita + 
-                       totalProduction + 
-                       totalGHG + HDI2015, 
+                       log(population) + 
+                       log(totalProduction) +
+                       log(GDPperCapita) + 
+                       totalGHG + log(HDI2015), 
                      data = ecoDataReg)
 summary(normalNormal)
+par(mfrow=c(1,1))
 plot(normalNormal)
+
+hist(ecoDataReg$transFootprint)
 ```
 
 ## Binomial - Normal Hierarchical Model
