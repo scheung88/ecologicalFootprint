@@ -46,7 +46,7 @@ ecoData  <- ecoData  %>%
   mutate(GDPperCapita = as.numeric(GDPperCapita))
 
 # Finding duplicates
-table(ecoData$country)
+# table(ecoData$country)
 
 # Removing duplicates
 ## Kept the observation with more data / entries that made more sense
@@ -180,14 +180,15 @@ ecoData <- ecoData %>%
   left_join(HDI, by = c("country" = "Country")) %>%
   drop_na() %>%
   mutate(binomFootprint = ifelse(netFootprint < 0, 0, 1)) %>%
-  mutate(transFootprint = log(netFootprint + 15))
+  mutate(transFootprint = log(netFootprint + 15)) %>%
+  mutate(binomFootprint = as.factor(binomFootprint))
 
 # Saving our final ecoData
 write_csv(ecoData, "ecoData.csv")
 ```
 
 ## Regression 
-```{r}
+```{r, eval=FALSE}
 #normalizing the data
 ecoData <- ecoData %>% 
   mutate(GDPperCapita = as.numeric(GDPperCapita)) %>%
@@ -215,21 +216,11 @@ boston_idx = sample(1:nrow(Boston), nrow(Boston) / 2)
 boston_trn = Boston[boston_idx,]
 boston_tst = Boston[-boston_idx,]
 
-# First we try regression trees
 
-tree.model <- tree(log(netFootprint+15) ~ region + population + GDPperCapita + totalProduction, data=ecoData)
-summary(tree.model)
-
-plot(tree.model)
-text(tree.model, cex=.75)
-
-tree_model_cv = cv.tree(tree.model)
-plot(tree_model_cv$size, sqrt(tree_model_cv$dev / nrow(ecoData)), type = "b",
-     xlab = "Tree Size", ylab = "CV-RMSE")
 ```
 
 ## Fitting Distribution
-```{r}
+```{r, eval=FALSE}
 # Determining distribution of Y
 # Our Y-variable = net biocapcity of each country
 hist(log(ecoData$netFootprint))
@@ -270,11 +261,42 @@ descdist(ecoData$totalFootprint, discrete = FALSE)
 # of the entire world where countries are filled in with their net 
 # bio capacity? can test continuous case and then also categorical case where 
 # we color by whether it's deficit or reserve
-ggplot(aes(population, netFootprint), data = ecoData) + 
+world <- map_data("world")
+
+# Dataset 1 rendered from user-specifed input
+mapData <- ecoData %>%
+  left_join(world, by = c("country" = "region"))
+
+# Visualization 1
+# Need to create title that updates with user input
+ggplot() + 
+  geom_polygon(data = mapData, 
+               aes(x = long, y = lat, fill = binomFootprint, group = group),
+               col = "white") +
+  xlab("") +
+  ylab("") +
+  theme_minimal()
+
+ggplot() + 
+  geom_polygon(data = mapData, 
+               aes(x = long, y = lat, fill = transFootprint, group = group),
+               col = "white") +
+  xlab("") +
+  ylab("") +
+  theme_minimal()
+
+ggplot(aes(population, transFootprint), data = ecoData) + 
   geom_point() + 
   facet_wrap(~ continent) + 
-  xlab("length") + 
-  ylab("test score")
+  xlab("population") + 
+  ylab("transFootprint")
+
+ggplot(aes(population, binomFootprint), data = ecoData) + 
+  geom_point() + 
+  facet_wrap(~ continent) + 
+  xlab("population") + 
+  ylab("binomFootprint")
+
 ```
 
 
