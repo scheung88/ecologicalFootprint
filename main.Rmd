@@ -1,6 +1,6 @@
 ---
 title: "Wrangling"
-author: "Shirley Cheung"
+author: "Shirley Cheung, Tuan Nguyen"
 date: "April 25, 2018"
 output: html_document
 ---
@@ -9,263 +9,87 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Wrangling
-+ biocapcity data is 2016
-+ regional data is 2013
-+ greenhouse data is 2013
-
-## Libraries and Data
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE, include = FALSE}
 library(readr)
 library(rvest)
 library(ggmap)
 library(ggplot2)
 library(ggthemes)
 library(maps)
-library(plotly)
 library(leaflet)
 library(dplyr)
 library(tidyr)
 library(stringr)
 library(fitdistrplus)
 library(lme4)
+
+ecoDataReg <- read_csv("ecoDataReg.csv")
+ecoData <- read_csv("ecoData.csv")
 ```
 
-### Eco / Biocapacity Data
+It currently takes 1.5 Earths to feed 7 billion people. With the exponential growth of global population, we are consuming natural resources at an alarming rate. To measure mankind's existential pressure on the environment, Mathis Wackernagel and William Rees at the University of British Columbia came up with two quantities: ecological footprint and biocapacity. The former measures the ecological assets that are required to sustain a given population. The latter tracks the productivity of the same ecological assets, accounting for waste accumulation, pollution and so on.
+
+A country is running an ecological deficit when its footprint exceeds biocapacity, and running an ecological reserve otherwise. In the long run, this means the country's ecosystems are no longer sustainable for its demands, and are heading for extinction. Of course, extinction is rarely the case thanks to the free flow of trade. This project aims to predict ecological deficit / reserve of a nation in 2016 using the following country-specific characteristics:
+
+* Population in 2016
+* GDP per capita in 2016
+* The continent that the country is on 
+* The total food production in 2013
+* The greenhouse level in 2012
+* The human development index in 2015
+
+The data on net ecological footprint, population, continent and GDP per capita was collected by Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). This is our main source of predictors and response variables. For this data we replaced continent (e.g Middle East/Central Asia) by its abbreviation (e.g AS). Originally in character format, GDP per capita was converted into number through very simple string manipulation (dropping the *$* sign). The next predictor on the list, food production data, was downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data), by courtesy of the [United Nation](http://data.un.org/Explorer.aspx). This dataset spans between 1990 and 2013. We took the latest data (2013) and created a new variable by summing up food production across different categories. The Greenhouse Gas Emissions data by Country is collected by [World Resources Institue](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, we picked the most recent year (2012) of CO2 emission for each country. Last but not least is the Human Development Index data in 2015, by courtesy of [UNDP](http://hdr.undp.org/en/data). 
+
+To merge these 5 different predictors into 1 dataset, we performed inner-joins on the "Country" field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g USA vs United States of America).  
+
+(Not sure where to include this) Since we are interested in predicting whether a country would run an ecological deficit or reserve, we decided to introduce another response variable: Binomial net ecological footprint. Any country with a *negative* net ecological footprint will receive a 0 for this new column, and 1 otherwise. 
+
+Our final version of the data looks like this: 
+
+```{r, echo=FALSE}
+glimpse(ecoDataReg)
+```
+
+Before trying our hand at Mixed Effect Modeling? [Do we need to say why we are exploring Mixed Effect Modeling?], let's see the world outlook on ecological foot print. We produced the following choropleth maps by joining our final dataset for regression with a dataset of longtitude and latitude coordinates of all countries. 
+
+```{r, echo=FALSE}
+
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = as.factor(binomFootprint), group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+```
+
+The first map shows that America, North Africa, Central? Europe a good part of Asia are running a deficit in their ecosystems. It makes sense for Asia, which contains many developing countries, to be stretching out its resources in booming times. However, the argument does not really apply to a fairly established first world country like U.S.A. In our opinion, this is largely due to the entrenched environmental toll of fossil fuels industries, which render the ecosystem unsuitable for renewal. 
+
+```{r, echo=FALSE}
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = transFootprint, group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+```
+
+The second map shows the severity of deficit / reserve, rather than whether it is a defit or reserve in each country. There isn't a clear trend from the color gradient, but again we can tell that the States is suffering from a bad case of ecological deficit.
+
+```{r, echo=FALSE}
+ggplot(aes(x = transFootprint), data = ecoDataReg) + 
+  geom_density() + 
+  facet_wrap(~ continent)
+```
+
+Lastly, we present a distribution of net ecological footprints, broken down by continent. The footprints of most continents are normally distributed, with a few outliers. Most distributions center around roughly the same point (roughly 2.5). This graph provides evidence that there is not much distinction in net ecological footprints between different continents. We will later on confirm this observation through Mixed Effects Regression, which...
+
 ```{r}
-# Reading in eco dataset
-ecoData <- read_csv("countries.csv") 
-names(ecoData ) <- gsub(" ", "", names(ecoData )) 
 
-# Cleaning up eco dataset
-ecoData  <- ecoData  %>%
-  rename("country" = "Country", 
-         "region" = "Region",
-         "population" = "Population(millions)",
-         "totalFootprint" = "TotalEcologicalFootprint",
-         "totalBiocap" = "TotalBiocapacity",
-         "netFootprint" = "BiocapacityDeficitorReserve") %>%
-  dplyr::select(country, region, population, GDPperCapita, netFootprint) %>%
-  mutate(GDPperCapita = 
-           str_replace_all(GDPperCapita, 
-                           c("[:punct:]" = "", "\\$" = ""))) %>%
-  mutate(GDPperCapita = as.numeric(GDPperCapita))
 ```
 
-### World Data
-```{r}
-# World Data
-world <- map_data("world") %>%
-  dplyr::select(-subregion)
-
-# Finding countries in common that won't join because of spelling
-spellingErrors <- anti_join(ecoData, world, by = c("country" = "region"))
-
-# Fixing world names
-world <- world %>%
-  mutate(region = recode(region, 
-                         "Antigua" = "Antigua and Barbuda",
-                         "Barbuda" = "Antigua and Barbuda",
-                         "Virgin Islands" = "British Virgin Islands",
-                         "Brunei" = "Brunei Darussalam",
-                         "Saint Kitts" = "Saint Kitts and Nevis",
-                         "Saint Vincent" = "Saint Vincent and Grenadines",
-                         "Trinidad" = "Trinidad and Tobago",
-                         "Tobago" = "Trinidad and Tobago",
-                         "UK" = "United Kingdom",
-                         "USA" = "United States of America",
-                         "Wallis and Futuna" = "Wallis and Futuna Islands"))
-
-# Fixing eco names
-ecoData <- ecoData %>%
-  mutate(country = recode(country,
-                          "Cabo Verde" = "Cape Verde",
-                          "Congo" = "Republic of Congo",
-                          "Congo, Democratic Republic of" = 
-                            "Democratic Republic of the Congo",
-                          "Côte d'Ivoire" = "Ivory Coast",
-                          "Iran, Islamic Republic of" = "Iran",
-                          "Korea, Democratic People's Republic of" =
-                            "South Korea",
-                          "Korea, Republic of" = "North Korea",
-                          "Lao People's Democratic Republic" = "Laos",
-                          "Libyan Arab Jamahiriya" = "Libya",
-                          "Macedonia TFYR" = "Macedonia",
-                          "Réunion" = "Reunion",
-                          "Russian Federation" = "Russia",
-                          "Syrian Arab Republic" = "Russia",
-                          "Tanzania, United Republic of" = "Tanzania",
-                          "Venezuela, Bolivarian Republic of" =
-                            "Venezuela",
-                          "Viet Nam" = "Vietnam"))
-
-# Merging eco and world data
-ecoData <- ecoData %>%
-  left_join(world, by = c("country" = "region")) %>%
-  dplyr::select(-region)
-```
-
-### Production Data
-+ 2013 Total food production by country
-```{r}
-# Reading in regional data
-production <- read_csv("production.csv") %>%
-  replace_na(list(region = "NA")) %>%
-  group_by(Area, Year) %>%
-  mutate(totalProduction = as.numeric(sum(Production))) %>%
-  filter(Year == 2013) %>%
-  ungroup() %>%
-  distinct(Area, .keep_all = TRUE) %>%
-  dplyr::select(region, Area, totalProduction) %>%
-  rename("continent" = "region", "country" = "Area")
-
-# Finding countries in common with eco Data that won't join because of spelling
-spellingErrors <- anti_join(production, ecoData, by = "country")
-
-# Fixing names and merging with production data
-## Some countries are missing in eco data so there's nothing we can do about
-## missing observations
-
-## Combining China's total production
-china <- production %>%
-  filter(country %in% c("China, Hong Kong SAR", 
-                        "China, Macao SAR",
-                        "China, mainland")) %>%
-  mutate(country = recode(country, 
-                          "China, Hong Kong SAR" = "China",
-                          "China, Macao SAR" = "China",
-                          "China, mainland" = "China")) %>%
-  group_by(continent, country) %>%
-  summarise(totalProduction = sum(totalProduction))
-
-## Updating production data
-production <- production %>%
-  filter(!(country %in% c("China, Hong Kong SAR", 
-                        "China, Macao SAR",
-                        "China, mainland"))) %>%
-  full_join(china)
-
-# Fixing names in production data
-production <- production %>%
-  mutate(country = recode(country,
-                          "Bolivia (Plurinational State of)" = "Bolivia",
-                          "Cabo Verde" = "Cape Verde",
-                          "Congo" = "Republic of Congo",
-                          "Czechia" = "Czech Republic",
-                          "Democratic People's Republic of Korea" =
-                            "South Korea",
-                          "Iran (Islamic Republic of)" = "Iran",
-                          "Lao People's Democratic Republic" = "Laos",
-                          "Republic of Korea" = "North Korea",
-                          "Republic of Moldova" = "Moldova",
-                          "Saint Vincent and the Grenadines" =
-                            "Saint Vincent and Grenadines",
-                          "Russian Federation" = "Russia",
-                          "The former Yugoslav Republic of Macedonia" =
-                            "Macedonia",
-                          "United Republic of Tanzania" = "Tanzania",
-                          "Venezuela (Bolivarian Republic of)" = 
-                            "Venezuela",
-                          "Viet Nam" = "Vietnam"))
-
-# Merging eco and production data 
-ecoData <- ecoData %>%
-  left_join(production, by = "country")
-```
-
-### Greenhouse Data
-+ 2012 Greenhouse Data
-```{r}
-# Reading in greenhouse gas dataset
-greenhouse <- read_csv("CAITGHGData.csv") %>%
-  filter(Year == 2012) %>%
-  rename("totalGHG" = `Total GHG Emissions Including Land-Use Change and Forestry (MtCO?e?)`) %>%
-  dplyr::select(Country, totalGHG)
-  
-# Finding countries in common that won't join because of spelling
-spellingErrors <- anti_join(greenhouse, ecoData, by = c("Country" = "country"))
-
-# Fixing names and merging with production data
-## Some countries are missing in eco data so there's nothing we can do about
-## missing observations
-greenhouse <- greenhouse %>%
-  mutate(Country = recode(Country,
-                          "Antigua & Barbuda" = "Antigua and Barbuda",
-                          "Bahamas, The" = "Bahamas",
-                          "Bosnia & Herzegovina" = "Bosnia and Herzegovina",
-                          "Brunei" = "Brunei Darussalam",
-                          "Congo, Dem. Rep." = 
-                            "Democratic Republic of the Congo",
-                          "Congo, Rep." = "Republic of Congo",
-                          "Cote d'Ivoire" = "Ivory Coast",
-                          "Korea, Rep. (South)" = "South Korea",
-                          "Korea, Dem. Rep. (North)" = "North Korea",
-                          "Macedonia, FYR" = "Macedonia",
-                          "Russian Federation" = "Russia",
-                          "Saint Kitts & Nevis" = "Saint Kitts and Nevis",
-                          "Saint Vincent & Grenadines" = 
-                            "Saint Vincent and Grenadines",
-                          "Trinidad & Tobago" = "Trinidad and Tobago",
-                          "United States" = "United States of America",
-                          "United States of America" = "USA"))
-
-# Merging greenhouse gas dataset with eco dataset
-ecoData <- ecoData %>%
-  left_join(greenhouse, by = c("country" = "Country"))
-```
-
-### Human Development Index Data
-+ 2015 HDI
-```{r}
-# Reading in HDI data
-HDI <- read_csv("HDI.csv") %>%
-  rename("country" = "Country",
-         "HDI2015" = `2015`) %>%
-  dplyr::select(country, HDI2015)
-
-# Finding countries in common that won't join because of spelling
-spellingErrors <- anti_join(HDI, ecoData, by = "country")
-
-# Fixing spelling errors
-HDI <- HDI %>%
-  mutate(country = recode(country,
-         "Bolivia (Plurinational State of)" = "Bolivia",
-         "Cabo Verde" = "Cape Verde",
-         "Congo" = "Republic of Congo",
-         "Congo (Democratic Republic of the)" = 
-           "Democratic Republic of the Congo",
-         "C<99>te d'Ivoire" = "Ivory Coast",
-         "Iran (Islamic Republic of)" = "Iran", 
-         "Korea (Republic of)" = "North Korea",
-         "Lao People's Democratic Republic" = "Laos",
-         "Moldova (Republic of)" = "Moldova",
-         "Russian Federation" = "Russia",
-         "Saint Vincent and the Grenadines" = 
-           "Saint Vincent and Grenadines", 
-         "Tanzania (United Republic of)" = "Tanzania",
-         "The former Yugoslav Republic of Macedonia" = "Macedonia",
-         "United States" = "United States of America",
-         "Venezuela (Bolivarian Republic of)" = "Venezuela",
-         "Viet Nam" = "Vietnam"))
-HDI$country[HDI$HDI2015 == 0.474] <- "Ivory Coast"
-
-# Merging with HDI data
-ecoData <- ecoData %>%
-  left_join(HDI, by = "country") %>%
-  drop_na() %>%
-  mutate(binomFootprint = as.factor(ifelse(netFootprint < 0, 0, 1))) %>%
-  mutate(transFootprint = log(netFootprint + 15))
-
-# eco data without world map data contained
-## This form of data is better for building our models
-ecoDataReg <- ecoData %>%
-  distinct(country, .keep_all = TRUE) %>%
-  dplyr::select(-lat, -long, -group, -order)
-
-# Saving our final eco datasets
-write_csv(ecoData, "ecoData.csv")
-write_csv(ecoDataReg, "ecoDataReg.csv")
-```
+Not sure if we need to talk a bit about distribution... your call Shirley
 
 ## Fitting Distribution
 ```{r, eval=FALSE}

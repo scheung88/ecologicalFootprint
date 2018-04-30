@@ -1,0 +1,245 @@
+---
+title: "Wrangling"
+author: "Tuan Nguyen"
+date: "4/30/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, eval=FALSE}
+# Reading in eco dataset
+ecoData <- read_csv("countries.csv") 
+names(ecoData ) <- gsub(" ", "", names(ecoData )) 
+
+# Cleaning up eco dataset
+ecoData  <- ecoData  %>%
+  rename("country" = "Country", 
+         "region" = "Region",
+         "population" = "Population(millions)",
+         "totalFootprint" = "TotalEcologicalFootprint",
+         "totalBiocap" = "TotalBiocapacity",
+         "netFootprint" = "BiocapacityDeficitorReserve") %>%
+  dplyr::select(country, region, population, GDPperCapita, netFootprint) %>%
+  mutate(GDPperCapita = 
+           str_replace_all(GDPperCapita, 
+                           c("[:punct:]" = "", "\\$" = ""))) %>%
+  mutate(GDPperCapita = as.numeric(GDPperCapita))
+```
+
+### World Data
+```{r,eval=FALSE}
+# World Data
+world <- map_data("world") %>%
+  dplyr::select(-subregion)
+
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(ecoData, world, by = c("country" = "region"))
+
+# Fixing world names
+world <- world %>%
+  mutate(region = recode(region, 
+                         "Antigua" = "Antigua and Barbuda",
+                         "Barbuda" = "Antigua and Barbuda",
+                         "Virgin Islands" = "British Virgin Islands",
+                         "Brunei" = "Brunei Darussalam",
+                         "Saint Kitts" = "Saint Kitts and Nevis",
+                         "Saint Vincent" = "Saint Vincent and Grenadines",
+                         "Trinidad" = "Trinidad and Tobago",
+                         "Tobago" = "Trinidad and Tobago",
+                         "UK" = "United Kingdom",
+                         "USA" = "United States of America",
+                         "Wallis and Futuna" = "Wallis and Futuna Islands"))
+
+# Fixing eco names
+ecoData <- ecoData %>%
+  mutate(country = recode(country,
+                          "Cabo Verde" = "Cape Verde",
+                          "Congo" = "Republic of Congo",
+                          "Congo, Democratic Republic of" = 
+                            "Democratic Republic of the Congo",
+                          "Côte d'Ivoire" = "Ivory Coast",
+                          "Iran, Islamic Republic of" = "Iran",
+                          "Korea, Democratic People's Republic of" =
+                            "South Korea",
+                          "Korea, Republic of" = "North Korea",
+                          "Lao People's Democratic Republic" = "Laos",
+                          "Libyan Arab Jamahiriya" = "Libya",
+                          "Macedonia TFYR" = "Macedonia",
+                          "Réunion" = "Reunion",
+                          "Russian Federation" = "Russia",
+                          "Syrian Arab Republic" = "Russia",
+                          "Tanzania, United Republic of" = "Tanzania",
+                          "Venezuela, Bolivarian Republic of" =
+                            "Venezuela",
+                          "Viet Nam" = "Vietnam"))
+
+# Merging eco and world data
+ecoData <- ecoData %>%
+  left_join(world, by = c("country" = "region")) %>%
+  dplyr::select(-region)
+```
+
+### Production Data
++ 2013 Total food production by country
+```{r,eval=FALSE}
+# Reading in regional data
+production <- read_csv("production.csv") %>%
+  replace_na(list(region = "NA")) %>%
+  group_by(Area, Year) %>%
+  mutate(totalProduction = as.numeric(sum(Production))) %>%
+  filter(Year == 2013) %>%
+  ungroup() %>%
+  distinct(Area, .keep_all = TRUE) %>%
+  dplyr::select(region, Area, totalProduction) %>%
+  rename("continent" = "region", "country" = "Area")
+
+# Finding countries in common with eco Data that won't join because of spelling
+spellingErrors <- anti_join(production, ecoData, by = "country")
+
+# Fixing names and merging with production data
+## Some countries are missing in eco data so there's nothing we can do about
+## missing observations
+
+## Combining China's total production
+china <- production %>%
+  filter(country %in% c("China, Hong Kong SAR", 
+                        "China, Macao SAR",
+                        "China, mainland")) %>%
+  mutate(country = recode(country, 
+                          "China, Hong Kong SAR" = "China",
+                          "China, Macao SAR" = "China",
+                          "China, mainland" = "China")) %>%
+  group_by(continent, country) %>%
+  summarise(totalProduction = sum(totalProduction))
+
+## Updating production data
+production <- production %>%
+  filter(!(country %in% c("China, Hong Kong SAR", 
+                        "China, Macao SAR",
+                        "China, mainland"))) %>%
+  full_join(china)
+
+# Fixing names in production data
+production <- production %>%
+  mutate(country = recode(country,
+                          "Bolivia (Plurinational State of)" = "Bolivia",
+                          "Cabo Verde" = "Cape Verde",
+                          "Congo" = "Republic of Congo",
+                          "Czechia" = "Czech Republic",
+                          "Democratic People's Republic of Korea" =
+                            "South Korea",
+                          "Iran (Islamic Republic of)" = "Iran",
+                          "Lao People's Democratic Republic" = "Laos",
+                          "Republic of Korea" = "North Korea",
+                          "Republic of Moldova" = "Moldova",
+                          "Saint Vincent and the Grenadines" =
+                            "Saint Vincent and Grenadines",
+                          "Russian Federation" = "Russia",
+                          "The former Yugoslav Republic of Macedonia" =
+                            "Macedonia",
+                          "United Republic of Tanzania" = "Tanzania",
+                          "Venezuela (Bolivarian Republic of)" = 
+                            "Venezuela",
+                          "Viet Nam" = "Vietnam"))
+
+# Merging eco and production data 
+ecoData <- ecoData %>%
+  left_join(production, by = "country")
+```
+
+### Greenhouse Data
++ 2012 Greenhouse Data
+```{r,eval=FALSE}
+# Reading in greenhouse gas dataset
+greenhouse <- read_csv("CAITGHGData.csv") %>%
+  filter(Year == 2012) %>%
+  rename("totalGHG" = `Total GHG Emissions Including Land-Use Change and Forestry (MtCO?e?)`) %>%
+  dplyr::select(Country, totalGHG)
+  
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(greenhouse, ecoData, by = c("Country" = "country"))
+
+# Fixing names and merging with production data
+## Some countries are missing in eco data so there's nothing we can do about
+## missing observations
+greenhouse <- greenhouse %>%
+  mutate(Country = recode(Country,
+                          "Antigua & Barbuda" = "Antigua and Barbuda",
+                          "Bahamas, The" = "Bahamas",
+                          "Bosnia & Herzegovina" = "Bosnia and Herzegovina",
+                          "Brunei" = "Brunei Darussalam",
+                          "Congo, Dem. Rep." = 
+                            "Democratic Republic of the Congo",
+                          "Congo, Rep." = "Republic of Congo",
+                          "Cote d'Ivoire" = "Ivory Coast",
+                          "Korea, Rep. (South)" = "South Korea",
+                          "Korea, Dem. Rep. (North)" = "North Korea",
+                          "Macedonia, FYR" = "Macedonia",
+                          "Russian Federation" = "Russia",
+                          "Saint Kitts & Nevis" = "Saint Kitts and Nevis",
+                          "Saint Vincent & Grenadines" = 
+                            "Saint Vincent and Grenadines",
+                          "Trinidad & Tobago" = "Trinidad and Tobago",
+                          "United States" = "United States of America",
+                          "United States of America" = "USA"))
+
+# Merging greenhouse gas dataset with eco dataset
+ecoData <- ecoData %>%
+  left_join(greenhouse, by = c("country" = "Country"))
+```
+
+### Human Development Index Data
++ 2015 HDI
+```{r,eval=FALSE}
+# Reading in HDI data
+HDI <- read_csv("HDI.csv") %>%
+  rename("country" = "Country",
+         "HDI2015" = `2015`) %>%
+  dplyr::select(country, HDI2015)
+
+# Finding countries in common that won't join because of spelling
+spellingErrors <- anti_join(HDI, ecoData, by = "country")
+
+# Fixing spelling errors
+HDI <- HDI %>%
+  mutate(country = recode(country,
+         "Bolivia (Plurinational State of)" = "Bolivia",
+         "Cabo Verde" = "Cape Verde",
+         "Congo" = "Republic of Congo",
+         "Congo (Democratic Republic of the)" = 
+           "Democratic Republic of the Congo",
+         "C<99>te d'Ivoire" = "Ivory Coast",
+         "Iran (Islamic Republic of)" = "Iran", 
+         "Korea (Republic of)" = "North Korea",
+         "Lao People's Democratic Republic" = "Laos",
+         "Moldova (Republic of)" = "Moldova",
+         "Russian Federation" = "Russia",
+         "Saint Vincent and the Grenadines" = 
+           "Saint Vincent and Grenadines", 
+         "Tanzania (United Republic of)" = "Tanzania",
+         "The former Yugoslav Republic of Macedonia" = "Macedonia",
+         "United States" = "United States of America",
+         "Venezuela (Bolivarian Republic of)" = "Venezuela",
+         "Viet Nam" = "Vietnam"))
+HDI$country[HDI$HDI2015 == 0.474] <- "Ivory Coast"
+
+# Merging with HDI data
+ecoData <- ecoData %>%
+  left_join(HDI, by = "country") %>%
+  drop_na() %>%
+  mutate(binomFootprint = as.factor(ifelse(netFootprint < 0, 0, 1))) %>%
+  mutate(transFootprint = log(netFootprint + 15))
+
+# eco data without world map data contained
+## This form of data is better for building our models
+ecoDataReg <- ecoData %>%
+  distinct(country, .keep_all = TRUE) %>%
+  dplyr::select(-lat, -long, -group, -order)
+
+# Saving our final eco datasets
+write_csv(ecoData, "ecoData.csv")
+write_csv(ecoDataReg, "ecoDataReg.csv")
+```

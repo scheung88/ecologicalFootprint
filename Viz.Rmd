@@ -19,25 +19,7 @@ ecoData <- read_csv("ecoData.csv")
 ecoDataReg <- read_csv("ecoDataReg.csv") %>% 
   mutate_at(.vars = c("population", "GDPperCapita", "totalProduction", "totalGHG", "HDI2015"), .funs = funs( as.numeric(scale(.) )))
 
-ggplot() + 
-  geom_polygon(data = ecoData, 
-               aes(x = long, y = lat, fill = as.factor(binomFootprint), group = group),
-               col = "white") +
-  xlab("Long") +
-  ylab("Lat") +
-  theme_minimal()
 
-ggplot() + 
-  geom_polygon(data = ecoData, 
-               aes(x = long, y = lat, fill = transFootprint, group = group),
-               col = "white") +
-  xlab("Long") +
-  ylab("Lat") +
-  theme_minimal()
-
-ggplot(aes(x = transFootprint), data = ecoDataReg) + 
-  geom_density() + 
-  facet_wrap(~ continent)
 
 ggplot(aes(x=HDI2015,y=netFootprint,colour=continent), data = ecoDataReg)+
   geom_point()+
