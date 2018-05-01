@@ -319,7 +319,7 @@ normalNormal <- lmer(transFootprint ~ (1|continent) +
                        log(population) + 
                        log(totalProduction) +
                        log(GDPperCapita) + 
-                       totalGHG + log(HDI2015), 
+                       log(totalGHG) + log(HDI2015), 
                      data = ecoDataReg)
 summary(normalNormal)
 ```
@@ -327,11 +327,11 @@ summary(normalNormal)
 ### Binomial Normal Hierarchical Model
 ```{r, warning = FALSE, message = FALSE}
 binomialNormal <- glmer(binomFootprint ~ (1|continent) + 
-                       population + 
-                       totalProduction +
-                       GDPperCapita + 
-                       totalProduction + 
-                       totalGHG + HDI2015, 
+                       log(population) + 
+                       log(totalProduction) +
+                       log(GDPperCapita) + 
+                       log(totalProduction) + 
+                       log(totalGHG) + log(HDI2015), 
                      data = ecoDataReg)
 summary(binomialNormal)
 ```
