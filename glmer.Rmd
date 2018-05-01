@@ -25,6 +25,24 @@ ecoDataReg <- read_csv("ecoDataReg.csv")
 ## Normal Normal Hierarchical Model
 ```{r}
 # Normal - Normal Hierarchy
+fit1 <- lm(transFootprint ~ population + totalProduction +
+             GDPperCapita + totalGHG + HDI2015, data = ecoDataReg)
+summary(fit1)
+plot(fit1)
+
+transFootprint <- ecoDataReg$transFootprint
+population <- ecoDataReg$population
+totalProduction <- ecoDataReg$totalProduction
+GDPperCapita <- ecoDataReg$GDPperCapita
+totalGHG <- ecoDataReg$totalGHG
+HDI2015 <- ecoDataReg$HDI2015
+
+plot(log(population), transFootprint)
+plot(log(GDPperCapita), transFootprint)
+plot(log(totalGHG), transFootprint)
+plot(log(HDI2015), transFootprint)
+
+
 normalNormal <- lmer(transFootprint ~ (1|continent) + 
                        log(population) + 
                        log(totalProduction) +

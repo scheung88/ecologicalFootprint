@@ -26,6 +26,7 @@ library(lme4)
 ecoDataReg <- read_csv("ecoDataReg.csv")
 ecoData <- read_csv("ecoData.csv")
 ```
+
 ## Introduction 
 It currently takes 1.5 Earths to feed 7 billion people. With the exponential growth of global population, we are consuming natural resources at an alarming rate. To measure mankind's existential pressure on the environment, Mathis Wackernagel and William Rees at the University of British Columbia came up with two quantities: ecological footprint and biocapacity. The former measures the ecological assets that are required to sustain a given population. The latter tracks the productivity of the same ecological assets, accounting for waste accumulation, pollution and so on.
 
