@@ -19,8 +19,6 @@ library(maps)
 library(leaflet)
 library(dplyr)
 library(tidyr)
-library(stringr)
-library(fitdistrplus)
 library(lme4)
 
 ecoDataReg <- read_csv("ecoDataReg.csv")
@@ -57,7 +55,8 @@ Before trying our hand at Mixed Effect Modeling? [Do we need to say why we are e
 
 ggplot() + 
   geom_polygon(data = ecoData, 
-               aes(x = long, y = lat, fill = as.factor(binomFootprint), group = group),
+               aes(x = long, y = lat, fill = as.factor(binomFootprint), 
+                   group = group),
                col = "white") +
   xlab("Long") +
   ylab("Lat") +
