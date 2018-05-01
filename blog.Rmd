@@ -14,18 +14,18 @@ It currently takes 1.5 Earths to feed 7 billion people. With the exponential gro
 
 This project aims to predict ecological deficit / reserve of a nation in 2016 using the following country-specific characteristics:
 
-* Population in 2016
-* GDP per capita in 2016
-* The continent that the country is on 
-* The total food production in 2013
-* The greenhouse gas emission in 2012
-* The human development index in 2015
+* `Population` in 2016
+* `GDP per capita` in 2016
+* `Continent` that the country is on 
+* `Total food production` in 2013
+* `Greenhouse gas emission` in 2012
+* `Human development index` in 2015
 
-The data on net ecological footprint, population, continent and GDP per capita was collected by Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). This is our main source of predictors and response variables. For this data we replaced continent (e.g Middle East/Central Asia) by its abbreviation (e.g AS). Originally in character format, GDP per capita was converted into number through very simple string manipulation (dropping the *$* sign). The next predictor on the list, food production data, was downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data), by courtesy of the [United Nation](http://data.un.org/Explorer.aspx). This dataset spans between 1990 and 2013. We took the latest data (2013) and created a new variable by summing up food production across different categories. The Greenhouse Gas Emissions data by Country is collected by [World Resources Institue](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, we picked the most recent year (2012) of CO2 emission for each country. Last but not least is the Human Development Index data in 2015, by courtesy of [UNDP](http://hdr.undp.org/en/data). 
+The data on `net ecological footprint`, `population`, `continent` and `GDP per capita` was collected by Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). This is our main source of predictors and response variables. For this data we replaced `continent` (e.g Middle East/Central Asia) by its abbreviation (e.g AS). Originally in character format, `GDP per capita` was converted into number through very simple string manipulation (dropping the *$* sign). The next predictor on the list, `total food production`, was downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data), by courtesy of the [United Nation](http://data.un.org/Explorer.aspx). This dataset spans between 1990 and 2013. We took the latest data (2013) and created a new variable by summing up food production across different categories. The `Greenhouse Gas Emission` data by Country is collected by [World Resources Institue](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, we picked the most recent year (2012) of CO2 emission for each country. Last but not least is the `Human Development Index` data in 2015, by courtesy of [UNDP](http://hdr.undp.org/en/data). 
 
 
 # Wrangling 
-To merge these five different predictors into one dataset, we performed left-joins on the "Country" field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g USA vs United States of America).
+To merge these five different predictors into one dataset, we performed left-joins on the `Country` field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g `USA` vs `United States of America`).
 
 ### Libraries
 ```{r, warning = FALSE, message = FALSE}
@@ -296,7 +296,7 @@ plot(log(population), transFootprint,
 ```
 
 After checking the linear relationship between all of our $x_i$s and transformed $y$, we end up with $$log(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{1}) + \beta_{2}log(x_{2}) + \beta_{3}log(x_{3}) + \beta_{4}log(x_{4}) + \beta_{5}log(x_{5})$$
-where $x_1$ denotes population, $x_2$ denotes GDP per capita, $x_3$ denotes total food production, $x_4$ denotes greenhouse gas emission, and $x_5$ denotes the human development index. 
+where $x_1$ denotes `population`, $x_2$ denotes `GDP per capita`, $x_3$ denotes `total food production`, $x_4$ denotes `greenhouse gas emission`, and $x_5$ denotes the `human development index`. 
 
 Now let's check our residual and QQ plots for this model. 
 ```{r, warning = FALSE, message = FALSE}
