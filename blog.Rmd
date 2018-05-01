@@ -274,7 +274,7 @@ Before we can build our regression model, it's crucial that we first check that 
 hist(netFootprint, main = "Histogram of Net Footprint", xlab = "Net Footprint")
 summary(netFootprint)
 ```
-We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is take a transformation of our $y$. Let $$\text{transFootprint} = log(\text{netFootprint} + 15)$$
+We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is to take a transformation of our $y$. Let $$\text{transFootprint} = log(\text{netFootprint} + 15)$$
 
 ```{r}
 # Frequency of Transformed Net Footprint
