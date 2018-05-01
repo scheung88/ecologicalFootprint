@@ -27,16 +27,18 @@ The data on `net ecological footprint`, `population`, `continent` and `GDP per c
 # Wrangling 
 To merge these five different predictors into one dataset, we performed left-joins on the `Country` field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g `USA` vs `United States of America`).
 
-### Libraries
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
 library(readr)
-library(lme4)
+library(ggmap)
+library(ggplot2)
+library(ggthemes)
+library(maps)
 library(dplyr)
-library(car)
+library(tidyr)
+library(lme4)
 ```
 
-### World Data
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 # World Data
 world <- map_data("world") %>%
   dplyr::select(-subregion)
@@ -88,8 +90,7 @@ ecoData <- ecoData %>%
   dplyr::select(-region)
 ```
 
-### Production Data
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 ### Production Data
 # Reading in regional data
 production <- read_csv("production.csv") %>%
@@ -197,8 +198,7 @@ ecoData <- ecoData %>%
   left_join(greenhouse, by = c("country" = "Country"))
 ```
 
-### HDI Data
-```{r, eval = FALSE}
+```{r, eval = FALSE, echo = FALSE}
 # Reading in HDI data
 HDI <- read_csv("HDI.csv") %>%
   rename("country" = "Country",
@@ -253,6 +253,7 @@ write_csv(ecoDataReg, "ecoDataReg.csv")
 library(readr)
 library(dplyr)
 ecoDataReg <- read_csv("~/Documents/Swarthmore/4. Senior Year/Spring 2018/STAT 041/Stat041_p4_grp12/ecoDataReg.csv")
+ecoData <- read_csv("~/Documents/Swarthmore/4. Senior Year/Spring 2018/STAT 041/Stat041_p4_grp12/ecoData.csv")
 
 netFootprint <- ecoDataReg$netFootprint
 transFootprint <- ecoDataReg$transFootprint
@@ -274,7 +275,8 @@ Before we can build our regression model, it's crucial that we first check that 
 hist(netFootprint, main = "Histogram of Net Footprint", xlab = "Net Footprint")
 summary(netFootprint)
 ```
-We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is to take a transformation of our $y$. Let $$\text{transFootprint} = log(\text{netFootprint} + 15)$$
+
+We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is to take a transformation of our $y$. Let $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
 
 ```{r}
 # Frequency of Transformed Net Footprint
@@ -282,7 +284,7 @@ hist(transFootprint, main = "Histogram of Transformed Net Footprint",
      xlab = "Transformed Net Footprint")
 ```
 
-Now let's check if our $x_i$'s and transformed $y$ are linearly related.
+Now let's check if our $x_{ij}$'s and transformed $y_{i}$ are linearly related.
 ```{r}
 # Untransformed X
 plot(population, transFootprint, 
@@ -295,8 +297,8 @@ plot(log(population), transFootprint,
      xlab = "log(Population)", ylab = "Transformed Net Footprint")
 ```
 
-After checking the linear relationship between all of our $x_i$s and transformed $y$, we end up with $$log(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{1}) + \beta_{2}log(x_{2}) + \beta_{3}log(x_{3}) + \beta_{4}log(x_{4}) + \beta_{5}log(x_{5})$$
-where $x_1$ denotes `population`, $x_2$ denotes `GDP per capita`, $x_3$ denotes `total food production`, $x_4$ denotes `greenhouse gas emission`, and $x_5$ denotes the `human development index`. 
+After checking for linear relationships between all of our $x_{ij}$s and transformed $y$, we end up with $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$
+where $x_1$ denotes `population`, $x_2$ denotes `GDP per capita`, $x_3$ denotes `total food production`, $x_4$ denotes `greenhouse gas emission`, and $x_5$ denotes the `human development index`. It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
 
 Now let's check our residual and QQ plots for this model. 
 ```{r, warning = FALSE, message = FALSE}
@@ -309,10 +311,35 @@ fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
 plot(fit1, which = c(1,2))
 ```
 
-
 # Visualizations
+To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are filled in by net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint. 
+```{r}
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = transFootprint, group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+```
+
+
+In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our $y$ is the categorical indicator of either ecological deficit or surplus. 
+```{r}
+ggplot() + 
+  geom_polygon(data = ecoData, 
+               aes(x = long, y = lat, fill = as.factor(binomFootprint), 
+                   group = group),
+               col = "white") +
+  xlab("Long") +
+  ylab("Lat") +
+  theme_minimal()
+```
+
 
 # Hierarchical Models
+Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. 
+
 ### Normal Normal Hierarchical Model
 ```{r, warning = FALSE, message = FALSE}
 normalNormal <- lmer(transFootprint ~ (1|continent) + 
@@ -337,4 +364,3 @@ summary(binomialNormal)
 ```
 
 
-# Conclusion
