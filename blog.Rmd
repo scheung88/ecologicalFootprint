@@ -311,6 +311,42 @@ fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
 plot(fit1, which = c(1,2))
 ```
 
+# Hierarchical Models
+Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. To fit hierarchical models in R, the `lme4` package is your best bet. 
+
+### Normal Hierarchical Model
+Our first hierarchical model is a normal hierarchical model. It uses `transFootprint` as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. The regression tested below is almost identical to the one we derived above. The only difference is the added level of `continent`. Writing `continent` as (1|continent) tells R that we wish to add continent to our model as a random effect, rather than a fixed one. 
+
+```{r, warning = FALSE, message = FALSE}
+normalModel <- lmer(transFootprint ~ (1|continent) + 
+                       log(population) + 
+                       log(totalProduction) +
+                       log(GDPperCapita) + 
+                       log(totalGHG) + log(HDI2015), 
+                     data = ecoDataReg)
+
+summary(normalModel)
+```
+
+In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for GDP, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources. 
+
+### Binomial Hierarchical Model
+Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. `binomFootprint` is a categorical variable with a binomial distribution. 
+
+```{r, warning = FALSE, message = FALSE}
+binomialModel <- glmer(binomFootprint ~ (1|continent) + 
+                       population + 
+                       totalProduction +
+                       GDPperCapita + 
+                       totalProduction + 
+                       totalGHG + HDI2015, 
+                     data = ecoDataReg)
+
+summary(binomialModel)
+```
+
+Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that `continent` has a variance of 0.0745, which is quite small. This, again, suggests that adding `continent` to our model is not the most useful. In our predictors, the only significant variable seems to be GDP, which agree with our first model. 
+
 # Visualizations
 To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are filled in by net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint. 
 ```{r}
@@ -318,8 +354,9 @@ ggplot() +
   geom_polygon(data = ecoData, 
                aes(x = long, y = lat, fill = transFootprint, group = group),
                col = "white") +
-  xlab("Long") +
-  ylab("Lat") +
+  scale_fill_continuous(low = "thistle2", high = "darkred", 
+                        guide = "colorbar", na.value = "white", 
+                        name = "Net Ecological Footprint") +
   theme_minimal()
 ```
 
@@ -331,36 +368,8 @@ ggplot() +
                aes(x = long, y = lat, fill = as.factor(binomFootprint), 
                    group = group),
                col = "white") +
-  xlab("Long") +
-  ylab("Lat") +
+  scale_fill_brewer(palette = "Set2", name = "Net Ecological Footprint", 
+                    labels = c("Deficit", "Reserve")) +
   theme_minimal()
 ```
-
-
-# Hierarchical Models
-Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. 
-
-### Normal Normal Hierarchical Model
-```{r, warning = FALSE, message = FALSE}
-normalNormal <- lmer(transFootprint ~ (1|continent) + 
-                       log(population) + 
-                       log(totalProduction) +
-                       log(GDPperCapita) + 
-                       log(totalGHG) + log(HDI2015), 
-                     data = ecoDataReg)
-summary(normalNormal)
-```
-
-### Binomial Normal Hierarchical Model
-```{r, warning = FALSE, message = FALSE}
-binomialNormal <- glmer(binomFootprint ~ (1|continent) + 
-                       log(population) + 
-                       log(totalProduction) +
-                       log(GDPperCapita) + 
-                       log(totalProduction) + 
-                       log(totalGHG) + log(HDI2015), 
-                     data = ecoDataReg)
-summary(binomialNormal)
-```
-
 
