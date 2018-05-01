@@ -267,7 +267,7 @@ glimpse(ecoDataReg)
 ```
 
 
-# Model Assumptions and Data Visualization 
+# Model Assumptions
 Before we can build our regression model, it's crucial that we first check that we haven't violated assumptions. First, let's take a look at our $y$ variable:
 ```{r}
 # Frequency of Net Footprint 
@@ -308,6 +308,9 @@ fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
 # Residual and QQ Plots
 plot(fit1, which = c(1,2))
 ```
+
+
+# Visualizations
 
 # Hierarchical Models
 ### Normal Normal Hierarchical Model
