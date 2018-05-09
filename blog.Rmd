@@ -10,9 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Introduction
-It currently takes 1.5 Earths to feed 7 billion people. With the exponential growth of global population, we are consuming natural resources at an alarming rate. To measure mankind's existential pressure on the environment, Mathis Wackernagel and William Rees at the University of British Columbia came up with two quantities: ecological footprint and biocapacity. The former measures the ecological assets that are required to sustain a given population. The latter tracks the productivity of the same ecological assets, accounting for waste accumulation, pollution and so on. A country is running an ecological deficit when its footprint exceeds biocapacity, and running an ecological reserve otherwise. 
+A third of all food produced for human consumption - 1.3 billions tons - is wasted every year. This amounts to an annual global loss of \$990 billion dollars, of which the United States alone contributes \$165 billion to. This is a devastating waste of resources, from the food itself to the labor, water, land, and additional assets required to produce this food. In a world where countries that starve to death still exist and global population growing exponentially, we simply can't afford to misuse our resources in this imprudent manner. 
 
-This project aims to predict ecological deficit / reserve of a nation in 2016 using the following country-specific characteristics:
+To estimate wasted resources on a country level, we can use two existing metrics: ecological footprint and biocapacity. Ecological footprint measures the ecological assets required to sustained a given population. This is usually in the unit of hectares. This means blah blah. Biocapacity essentially measures how much nature can afford to provide. This means blah blah. A country is running an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint. 
+
+In this project, we explore the relationship between the net footprint and the following variables: 
 
 * `Population` in 2016
 * `GDP per capita` in 2016
@@ -25,8 +27,6 @@ The data on `net ecological footprint`, `population`, `continent` and `GDP per c
 
 
 # Wrangling 
-To merge these five different predictors into one dataset, we performed left-joins on the `Country` field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g `USA` vs `United States of America`).
-
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
 library(readr)
 library(ggmap)
@@ -36,10 +36,15 @@ library(maps)
 library(dplyr)
 library(tidyr)
 library(lme4)
+
+ecoData <- read_csv("ecoData.csv")
+ecoDataReg <- read_csv("ecoDataReg.csv")
 ```
 
-```{r, eval = FALSE, echo = FALSE}
-# World Data
+To merge these five different predictors into one dataset, we performed left-joins on the `Country` field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g `USA` vs `United States of America`).
+
+### World Data
+```{r, eval = FALSE}
 world <- map_data("world") %>%
   dplyr::select(-subregion)
 
@@ -90,8 +95,8 @@ ecoData <- ecoData %>%
   dplyr::select(-region)
 ```
 
-```{r, eval = FALSE, echo = FALSE}
 ### Production Data
+```{r, eval = FALSE}
 # Reading in regional data
 production <- read_csv("production.csv") %>%
   replace_na(list(region = "NA")) %>%
@@ -159,7 +164,6 @@ ecoData <- ecoData %>%
 
 ### Greenhouse Data
 ```{r, eval = FALSE}
-### Greenhouse Data
 # Reading in greenhouse gas dataset
 greenhouse <- read_csv("CAITGHGData.csv") %>%
   filter(Year == 2012) %>%
@@ -198,7 +202,8 @@ ecoData <- ecoData %>%
   left_join(greenhouse, by = c("country" = "Country"))
 ```
 
-```{r, eval = FALSE, echo = FALSE}
+### HDI Data
+```{r, eval = FALSE}
 # Reading in HDI data
 HDI <- read_csv("HDI.csv") %>%
   rename("country" = "Country",
@@ -249,22 +254,17 @@ write_csv(ecoData, "ecoData.csv")
 write_csv(ecoDataReg, "ecoDataReg.csv")
 ```
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE}
-library(readr)
-library(dplyr)
-ecoDataReg <- read_csv("~/Documents/Swarthmore/4. Senior Year/Spring 2018/STAT 041/Stat041_p4_grp12/ecoDataReg.csv")
-ecoData <- read_csv("~/Documents/Swarthmore/4. Senior Year/Spring 2018/STAT 041/Stat041_p4_grp12/ecoData.csv")
-
+```{r, eval = FALSE}
 netFootprint <- ecoDataReg$netFootprint
 transFootprint <- ecoDataReg$transFootprint
 binomFootprint <- ecoDataReg$binomFootprint
 population <- ecoDataReg$population
-totalProduction <- ecoDataReg$totalProduction
-GDPperCapita <- ecoDataReg$GDPperCapita
-totalGHG <- ecoDataReg$totalGHG
-HDI2015 <- ecoDataReg$HDI2015
-
-glimpse(ecoDataReg)
+totalProduction <- ecoDataReg$totalProduction 
+GDPperCapita <- ecoDataReg$GDPperCapita 
+totalGHG <- ecoDataReg$totalGHG 
+HDI2015 <- ecoDataReg$HDI2015 
+ 
+glimpse(ecoDataReg) 
 ```
 
 
@@ -373,3 +373,6 @@ ggplot() +
   theme_minimal()
 ```
 
+# Conclusion
+Try other predictors
+Wheil 
