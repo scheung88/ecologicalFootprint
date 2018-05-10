@@ -10,24 +10,33 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Introduction
-A third of all food produced for human consumption - 1.3 billions tons - is wasted every year. This amounts to an annual global loss of \$990 billion dollars, of which the United States alone contributes \$165 billion to. This is a devastating waste of resources, from the food itself to the labor, water, land, and additional assets required to produce this food. In a world where countries that starve to death still exist and global population growing exponentially, we simply can't afford to misuse our resources in this imprudent manner. 
+A third of all food produced for human consumption --- 1.3 billions tons --- is wasted every year. This amounts to an annual global loss of \$990 billion, of which the United States alone contributes \$165 billion ([FAO](http://www.fao.org/save-food/resources/keyfindings/en/)). This is a devastating waste of resources: from the food itself to the labor, time, and additional capital required to produce this food (ie. water). In a world where there still exist countries that suffer from hunger and global population which grows exponentially, we simply can't afford to misuse our resources in this imprudent manner. 
 
-To estimate wasted resources on a country level, we can use two existing metrics: ecological footprint and biocapacity. Ecological footprint measures the ecological assets required to sustained a given population. This is usually in the unit of hectares. This means blah blah. Biocapacity essentially measures how much nature can afford to provide. This means blah blah. A country is running an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint. 
+To estimate the entirety of wasted resources and not just food alone, we can use two existing metrics: ecological footprint and biocapacity. Intuitively, ecological footprint is the "amount of nature" required to sustain a given population. This figure might include the amount of land needed to absorb carbon dioxide emissions or the amount of land necessary to grow enough food to feed a population. Biocapacity is the "amount of nature" actually available for consumption needs. For instance, the biocapacity of land accessible for food production might 1000 hectares in one country, but only 500 hectares in another. A familiar analogy of biocapacity and ecological footprint is supply and demand (respectively), where we're now simply dealing in units of biologically productive land. A country runs an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint. 
 
-In this project, we explore the relationship between the net footprint and the following variables: 
+In this project, we explore, on a country level, the relationship between net footprint and the following variables: 
 
-* `Population` in 2016
-* `GDP per capita` in 2016
-* `Continent` that the country is on 
-* `Total food production` in 2013
-* `Greenhouse gas emission` in 2012
-* `Human development index` in 2015
+* Population
+* GDP per capita
+* Total food production
+* Greenhouse gas emission
+* Human Development Index
+* Continent 
 
-The data on `net ecological footprint`, `population`, `continent` and `GDP per capita` was collected by Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). This is our main source of predictors and response variables. For this data we replaced `continent` (e.g Middle East/Central Asia) by its abbreviation (e.g AS). Originally in character format, `GDP per capita` was converted into number through very simple string manipulation (dropping the *$* sign). The next predictor on the list, `total food production`, was downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data), by courtesy of the [United Nation](http://data.un.org/Explorer.aspx). This dataset spans between 1990 and 2013. We took the latest data (2013) and created a new variable by summing up food production across different categories. The `Greenhouse Gas Emission` data by Country is collected by [World Resources Institue](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, we picked the most recent year (2012) of CO2 emission for each country. Last but not least is the `Human Development Index` data in 2015, by courtesy of [UNDP](http://hdr.undp.org/en/data). 
+Data on net footprint, population, GDP per capita, and continent was collected from the Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). These variables were recorded for the year 2016. The variable of total food production was created using data from the Food and Agriculture Organization of the United Nations (FAO) and also downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data). Unfortunately, data for 2016 was not available; thus, we used the most recent data of 2013. The variable of greenhouse gas emission was collected from the [World Resources Institute](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, the year 2016 was not available and thus we used the most recent year of 2012. Finally, data on the 2015 Human Development Index was collected from the [United Nations Development Programme](http://hdr.undp.org/en/data#). The Human Development Index essentially measures the cultural and social "strength" of a population such as the average life span, level of education, and standard of life. To summarise, 
 
+Variable                  | Type  |  Year  | Source
+------------------------- | ----- | ------ | ----------
+Net Footprint             |  $y$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
+Population                |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
+GDP per capita            |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
+Continent                 |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
+Total food production     |  $x$  |  2013  | [Food and Agriculture Organization](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data)
+Greenhouse gas emission   |  $x$  |  2012  | [World Resources Institute](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data)
+Human development index   |  $x$  |  2015  | [United Nations Development Programme](http://hdr.undp.org/en/data#)
 
-# Wrangling 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+# Wrangling
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
 library(readr)
 library(ggmap)
 library(ggplot2)
@@ -41,10 +50,10 @@ ecoData <- read_csv("ecoData.csv")
 ecoDataReg <- read_csv("ecoDataReg.csv")
 ```
 
-To merge these five different predictors into one dataset, we performed left-joins on the `Country` field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g `USA` vs `United States of America`).
+To merge these five different predictors into one dataset, we performed left-joins on the Country field. The majority of our wrangling efforts was spent on anti-joining the master dataset and the smaller one containing the predictor to reconcile different names of the same country (e.g USA vs United States of America).
 
 ### World Data
-```{r, eval = FALSE}
+```{r}
 world <- map_data("world") %>%
   dplyr::select(-subregion)
 
@@ -96,7 +105,7 @@ ecoData <- ecoData %>%
 ```
 
 ### Production Data
-```{r, eval = FALSE}
+```{r}
 # Reading in regional data
 production <- read_csv("production.csv") %>%
   replace_na(list(region = "NA")) %>%
@@ -163,7 +172,7 @@ ecoData <- ecoData %>%
 ```
 
 ### Greenhouse Data
-```{r, eval = FALSE}
+```{r}
 # Reading in greenhouse gas dataset
 greenhouse <- read_csv("CAITGHGData.csv") %>%
   filter(Year == 2012) %>%
@@ -203,7 +212,7 @@ ecoData <- ecoData %>%
 ```
 
 ### HDI Data
-```{r, eval = FALSE}
+```{r}
 # Reading in HDI data
 HDI <- read_csv("HDI.csv") %>%
   rename("country" = "Country",
@@ -252,9 +261,6 @@ ecoDataReg <- ecoData %>%
 # Saving our final eco datasets
 write_csv(ecoData, "ecoData.csv")
 write_csv(ecoDataReg, "ecoDataReg.csv")
-```
-
-```{r, eval = FALSE}
 netFootprint <- ecoDataReg$netFootprint
 transFootprint <- ecoDataReg$transFootprint
 binomFootprint <- ecoDataReg$binomFootprint
@@ -264,18 +270,17 @@ GDPperCapita <- ecoDataReg$GDPperCapita
 totalGHG <- ecoDataReg$totalGHG 
 HDI2015 <- ecoDataReg$HDI2015 
  
-glimpse(ecoDataReg) 
+glimpse(ecoDataReg)
 ```
-
 
 # Model Assumptions
 Before we can build our regression model, it's crucial that we first check that we haven't violated assumptions. First, let's take a look at our $y$ variable:
+
 ```{r}
 # Frequency of Net Footprint 
 hist(netFootprint, main = "Histogram of Net Footprint", xlab = "Net Footprint")
 summary(netFootprint)
 ```
-
 We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is to take a transformation of our $y$. Let $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
 
 ```{r}
@@ -283,8 +288,8 @@ We see that our $y$ variable of net footprint doesn't seem to follow a normal di
 hist(transFootprint, main = "Histogram of Transformed Net Footprint",
      xlab = "Transformed Net Footprint")
 ```
-
 Now let's check if our $x_{ij}$'s and transformed $y_{i}$ are linearly related.
+
 ```{r}
 # Untransformed X
 plot(population, transFootprint, 
@@ -296,12 +301,10 @@ plot(log(population), transFootprint,
      main = "Transformed Population vs. Transformed Net Footprint",
      xlab = "log(Population)", ylab = "Transformed Net Footprint")
 ```
+After checking for linear relationships between all of our $x_{ij}$s and transformed $y$, we end up with $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$ where $x_1$ denotes population, $x_2$ denotes GDP per capita, $x_3$ denotes total food production, $x_4$ denotes greenhouse gas emission, and $x_5$ denotes the human development index. It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
 
-After checking for linear relationships between all of our $x_{ij}$s and transformed $y$, we end up with $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$
-where $x_1$ denotes `population`, $x_2$ denotes `GDP per capita`, $x_3$ denotes `total food production`, $x_4$ denotes `greenhouse gas emission`, and $x_5$ denotes the `human development index`. It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
-
-Now let's check our residual and QQ plots for this model. 
-```{r, warning = FALSE, message = FALSE}
+Now let's check our residual and QQ plots for this model.
+```{r}
 # Regression 
 fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
              log(GDPperCapita) + log(totalGHG) + log(HDI2015), 
@@ -312,12 +315,12 @@ plot(fit1, which = c(1,2))
 ```
 
 # Hierarchical Models
-Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. To fit hierarchical models in R, the `lme4` package is your best bet. 
+Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. To fit hierarchical models in R, the lme4 package is your best bet.
 
 ### Normal Hierarchical Model
-Our first hierarchical model is a normal hierarchical model. It uses `transFootprint` as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. The regression tested below is almost identical to the one we derived above. The only difference is the added level of `continent`. Writing `continent` as (1|continent) tells R that we wish to add continent to our model as a random effect, rather than a fixed one. 
+Our first hierarchical model is a normal hierarchical model. It uses transFootprint as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. The regression tested below is almost identical to the one we derived above. The only difference is the added level of continent. Writing continent as (1|continent) tells R that we wish to add continent to our model as a random effect, rather than a fixed one.
 
-```{r, warning = FALSE, message = FALSE}
+```{r}
 normalModel <- lmer(transFootprint ~ (1|continent) + 
                        log(population) + 
                        log(totalProduction) +
@@ -327,13 +330,12 @@ normalModel <- lmer(transFootprint ~ (1|continent) +
 
 summary(normalModel)
 ```
-
-In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for GDP, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources. 
+In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for GDP, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources.
 
 ### Binomial Hierarchical Model
-Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. `binomFootprint` is a categorical variable with a binomial distribution. 
+Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into binomFootprint, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. binomFootprint is a categorical variable with a binomial distribution.
 
-```{r, warning = FALSE, message = FALSE}
+```{r}
 binomialModel <- glmer(binomFootprint ~ (1|continent) + 
                        population + 
                        totalProduction +
@@ -344,11 +346,11 @@ binomialModel <- glmer(binomFootprint ~ (1|continent) +
 
 summary(binomialModel)
 ```
-
-Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that `continent` has a variance of 0.0745, which is quite small. This, again, suggests that adding `continent` to our model is not the most useful. In our predictors, the only significant variable seems to be GDP, which agree with our first model. 
+Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is quite small. This, again, suggests that adding continent to our model is not the most useful. In our predictors, the only significant variable seems to be GDP, which agree with our first model.
 
 # Visualizations
-To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are filled in by net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint. 
+To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are filled in by net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint.
+
 ```{r}
 ggplot() + 
   geom_polygon(data = ecoData, 
@@ -359,9 +361,8 @@ ggplot() +
                         name = "Net Ecological Footprint") +
   theme_minimal()
 ```
+In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our $y$ is the categorical indicator of either ecological deficit or surplus.
 
-
-In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our $y$ is the categorical indicator of either ecological deficit or surplus. 
 ```{r}
 ggplot() + 
   geom_polygon(data = ecoData, 
@@ -374,5 +375,5 @@ ggplot() +
 ```
 
 # Conclusion
-Try other predictors
-Wheil 
+try other predictors 
+hierarchical model not necessary
