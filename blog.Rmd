@@ -41,6 +41,7 @@ Because the data on our predictors originated from various sources, the majority
 
 ### Libraries
 First, let's load the packages we need for wrangling:
+
 ```{r, message = FALSE, warning = FALSE}
 library(readr)
 library(dplyr)
@@ -132,10 +133,10 @@ ecoData <- ecoData %>%
 ```
 
 ### Adding Total Food Production Data
-For our production data, the framework of wrangling remains largely the same: reading in the production data, antijoining for spelling differences, then joining with our ecological data. There are, however, several important additional steps which are different from prior wrangling. 
+For our production data, the framework of wrangling remains largely the same: reading in the production data, antijoining for spelling differences, then joining with our ecological data. There are, however, several additional steps different from prior wrangling. First, we calculate total food production by summing production across food categories (ie. grains, fruits and vegetables, meat). Second, our antijoin tells us that our production data has three versions of China: `China, Hong Kong SAR`, `China, Macao SAR`, and `China, mainland`. Simply recoding these three versions of China into `China` does not sum their respective food production values. In this case, we must first isolate our three observations of China from the production data, recode and sum our observations before adding our new `China` observation back to the production data. 
 
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
-# Reading in production data
+# Reading in production data and calculating total food production
 production <- read_csv("production.csv") %>%
   replace_na(list(region = "NA")) %>% # NA's = North America
   group_by(Area, Year) %>% 
@@ -196,7 +197,9 @@ ecoData <- ecoData %>%
   left_join(production, by = "country")
 ```
 
-### Greenhouse Data
+### Adding Greenhouse Gas Data
+Adding our data on greenhouse gas emissions is extremely straight forward. We read in our dataset, check and fix spelling differences, then join with our ecological dataset. Very simple compared to the wrangling of our production data!
+
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
 # Reading in greenhouse gas dataset
 greenhouse <- read_csv("CAITGHGData.csv") %>% 
@@ -236,7 +239,9 @@ ecoData <- ecoData %>%
   left_join(greenhouse, by = c("country" = "Country"))
 ```
 
-### HDI Data
+### Adding HDI Data
+Similar to the wrangling of our greenhouse gas data, the wrangling of our Human Development Index data is equally straight forward. At this point, we have finished adding all predictors to our dataset. Note that in the last two lines of the following code snippet, we create two new forms of our $y$ variable, net footprint. The first transformation, `binomFootprint`, is a categorical variable which takes on the value of 0 when our net footprint is negative and the value of 1 when our net footprint is greater than or equal to 0. The second transformation, `transFootprint`, retains the quantitative aspect of net footprint by adding 15 and taking the log of this sum. The justification for this transformation will be justified in the following section. 
+
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
 # Reading in HDI data
 HDI <- read_csv("HDI.csv") %>% 
@@ -278,9 +283,12 @@ ecoData <- ecoData %>%
   mutate(transFootprint = log(netFootprint + 15))
 ```
 
-```{r}
-# eco data without world map data contained
-## This form of data is better for building our models
+Now that we're done with wrangling, let's save our work! Since this was a significant amount of wrangling, if we save our final datasets, we wouldn't have to run our code again every time we revisited this blog. 
+
+```{r, eval = FALSE}
+# Ecological data without world map data
+## This form of data is better for building our models because the original
+## form is too large and slows down the machine
 ecoDataReg <- ecoData %>%
   distinct(country, .keep_all = TRUE) %>%
   dplyr::select(-lat, -long, -group, -order)
@@ -288,6 +296,16 @@ ecoDataReg <- ecoData %>%
 # Saving our final eco datasets
 write_csv(ecoData, "ecoData.csv")
 write_csv(ecoDataReg, "ecoDataReg.csv")
+```
+
+
+# Model Assumptions
+```{r, message = FALSE, warning = FALSE, echo = FALSE} 
+# Reading in already finalized datasets so we don't have to run
+# wrangling code every time we knit
+ecoData <- read_csv("ecoData.csv") 
+ecoDataReg <- read_csv("ecoDataReg.csv")  
+
 netFootprint <- ecoDataReg$netFootprint
 transFootprint <- ecoDataReg$transFootprint
 binomFootprint <- ecoDataReg$binomFootprint
@@ -301,16 +319,7 @@ glimpse(ecoDataReg)
 ```
 
 
-# Model Assumptions
-```{r, message = FALSE, warning = FALSE, echo = FALSE}
-# Reading in already finalized datasets so we don't have to run
-# wrangling code every time we knit
-ecoData <- read_csv("ecoData.csv") 
-ecoDataReg <- read_csv("ecoDataReg.csv")  
-```
-
 Before we can build our regression model, it's crucial that we first check that we haven't violated assumptions. First, let's take a look at our $y$ variable:
-
 ```{r}
 # Frequency of Net Footprint 
 hist(netFootprint, main = "Histogram of Net Footprint", xlab = "Net Footprint")
@@ -352,19 +361,18 @@ fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
 plot(fit1, which = c(1,2))
 ```
 
-i hate this
 
 # Hierarchical Models
 Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. To fit hierarchical models in R, the lme4 package is your best bet.
 
-```{r, message = FALSE, warning = FALSE}
+```{r, message = FALSE, warning = FALSE} 
 library(lme4)
 ```
 
 ### Normal Hierarchical Model
 Our first hierarchical model is a normal hierarchical model. It uses transFootprint as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. The regression tested below is almost identical to the one we derived above. The only difference is the added level of continent. Writing continent as (1|continent) tells R that we wish to add continent to our model as a random effect, rather than a fixed one.
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 normalModel <- lmer(transFootprint ~ (1|continent) + 
                        log(population) + 
                        log(totalProduction) +
@@ -379,7 +387,7 @@ In the summary output of our normal hierarchical model, we see that the variance
 ### Binomial Hierarchical Model
 Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into binomFootprint, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. binomFootprint is a categorical variable with a binomial distribution.
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 binomialModel <- glmer(binomFootprint ~ (1|continent) + 
                        population + 
                        totalProduction +
@@ -393,7 +401,7 @@ summary(binomialModel)
 Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is quite small. This, again, suggests that adding continent to our model is not the most useful. In our predictors, the only significant variable seems to be GDP, which agree with our first model.
 
 # Visualizations
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE} 
 library(ggplot2)
 library(ggthemes)
 ```
