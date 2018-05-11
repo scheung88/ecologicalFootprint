@@ -127,7 +127,7 @@ $(document).ready(function () {
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>A third of all food produced for human consumption — 1.3 billions tons — is wasted every year. This amounts to an annual global loss of $990 billion, of which the United States alone contributes $165 billion (<a href="http://www.fao.org/save-food/resources/keyfindings/en/">FAO</a>). This is a devastating waste of resources: from the food itself to the labor, time, and additional capital required to produce this food (ie. water). In a world where there still exist countries that suffer from hunger and global population which grows exponentially, we simply can’t afford to misuse our resources in this imprudent manner.</p>
-<p>To estimate the entirety of wasted resources and not just food alone, we can use two existing metrics: ecological footprint and biocapacity. Intuitively, ecological footprint is the “amount of nature” required to sustain a given population. This figure might include the amount of land needed to absorb carbon dioxide emissions or the amount of land necessary to grow enough food to feed a population. Biocapacity is the “amount of nature” actually available for consumption needs. For instance, the biocapacity of land accessible for food production might 1000 hectares in one country, but only 500 hectares in another. A familiar analogy of biocapacity and ecological footprint is supply and demand (respectively), where we’re now simply dealing in units of biologically productive land. A country runs an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint.</p>
+<p>To estimate the entirety of wasted resources and not just food alone, we can use two existing metrics: ecological footprint and biocapacity. Intuitively, ecological footprint is the “amount of nature” required to sustain a given population. This figure might include the amount of land needed to absorb carbon dioxide emissions or the amount of land necessary to grow enough food to feed a population. Biocapacity is the “amount of nature” actually available for consumption needs. For instance, the biocapacity of land accessible for food production might be 1000 hectares in one country, but only 500 hectares in another. A familiar analogy of biocapacity and ecological footprint is supply and demand (respectively), where we’re now simply dealing in units of biologically productive land. A country runs an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint.</p>
 <p>In this project, we explore, on a country level, the relationship between net footprint and the following variables:</p>
 <ul>
 <li>Population</li>
@@ -137,7 +137,7 @@ $(document).ready(function () {
 <li>Human Development Index</li>
 <li>Continent</li>
 </ul>
-<p>Data on net footprint, population, GDP per capita, and continent was collected from the Global Footprint Network and downloaded from <a href="https://www.kaggle.com/footprintnetwork/ecological-footprint">Kaggle</a>. These variables were recorded for the year 2016. The variable of total food production was created using data from the Food and Agriculture Organization of the United Nations (FAO) and also downloaded from <a href="https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data">Kaggle</a>. Unfortunately, data for 2016 was not available; thus, we used the most recent data of 2013. The variable of greenhouse gas emission was collected from the <a href="http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data">World Resources Institute</a>. Similar to the food production data, the year 2016 was not available and thus we used the most recent year of 2012. Finally, data on the 2015 Human Development Index was collected from the <a href="http://hdr.undp.org/en/data#">United Nations Development Programme</a>. The Human Development Index essentially measures the cultural and social “strength” of a population such as the average life span, level of education, and standard of life. To summarise,</p>
+<p>Data on net footprint, population, GDP per capita, and continent was collected from the Global Footprint Network and downloaded from <a href="https://www.kaggle.com/footprintnetwork/ecological-footprint">Kaggle</a>. These variables were recorded for the year 2016. The variable of total food production was created using data from the Food and Agriculture Organization of the United Nations (FAO) and also downloaded from <a href="https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data">Kaggle</a>. Unfortunately, data for 2016 was not available; thus, we used the most recent data of 2013. The variable of greenhouse gas emission was collected from the <a href="http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data">World Resources Institute</a>. Similar to the food production data, the year 2016 was not available and thus we used the most recent year of 2012. Finally, data on the 2015 Human Development Index was collected from the <a href="http://hdr.undp.org/en/data#">United Nations Development Programme</a>. The Human Development Index measures the cultural and social “strength” of a population such as the average life span, level of education, and standard of life. To summarise,</p>
 <table>
 <thead>
 <tr class="header">
@@ -192,6 +192,261 @@ $(document).ready(function () {
 </tr>
 </tbody>
 </table>
+</div>
+<div id="wrangling" class="section level1">
+<h1>Wrangling</h1>
+<p>Because the data on our predictors originated from various sources, the majority of wrangling efforts were spent reconciling differences in naming conventions between datasets, then joining the two datasets. We will explore this in further detail in the following sections.</p>
+<div id="libraries" class="section level3">
+<h3>Libraries</h3>
+<p>First, let’s load the packages we need for wrangling:</p>
+<pre class="r"><code>library(readr)
+library(dplyr)
+library(tidyr)
+library(ggmap)
+library(maps)</code></pre>
+</div>
+<div id="ecological-data" class="section level3">
+<h3>Ecological Data</h3>
+<p>Our first dataset is the ecological data downloaded from the Global Footprint Network on <a href="https://www.kaggle.com/footprintnetwork/ecological-footprint">Kaggle</a>. This data contains our <span class="math inline">\(y\)</span> variable of interest, net ecological footprint, as well as two predictor variables: population and GDP per capita. In the code below, we read in our ecological data, adjust variable names, and clean up our <code>GDPperCapita</code> variable so that it does not contain commas and dollar signs. Moving forward, we use this dataset as a “base” to which we add additional predictor variables.</p>
+<pre class="r"><code># Reading in eco dataset
+ecoData &lt;- read_csv(&quot;countries.csv&quot;) 
+names(ecoData ) &lt;- gsub(&quot; &quot;, &quot;&quot;, names(ecoData )) 
+
+# Cleaning up eco dataset
+ecoData  &lt;- ecoData  %&gt;%
+  rename(&quot;country&quot; = &quot;Country&quot;, 
+         &quot;region&quot; = &quot;Region&quot;,
+         &quot;population&quot; = &quot;Population(millions)&quot;,
+         &quot;totalFootprint&quot; = &quot;TotalEcologicalFootprint&quot;,
+         &quot;totalBiocap&quot; = &quot;TotalBiocapacity&quot;,
+         &quot;netFootprint&quot; = &quot;BiocapacityDeficitorReserve&quot;) %&gt;%
+  dplyr::select(country, region, population, GDPperCapita, netFootprint) %&gt;%
+  mutate(GDPperCapita = 
+           str_replace_all(GDPperCapita, 
+                           c(&quot;[:punct:]&quot; = &quot;&quot;, &quot;\\$&quot; = &quot;&quot;))) %&gt;%
+  mutate(GDPperCapita = as.numeric(GDPperCapita))</code></pre>
+</div>
+<div id="adding-world-dataset" class="section level3">
+<h3>Adding World Dataset</h3>
+<p>Eventually, we want to create chloropleth maps of net ecological footprint by country. To do this, we must add the world dataset from the <code>maps</code> package to our existing data. The world dataset contains a list of all countries in the world, as well as their geographical locations. Before we can join our two datasets, we first need to check for differences in naming conventions. It’s unfortunate if our datasets don’t join entirely due to missing observations in one dataset, but it’s lazy data science if our datasets don’t join entirely due to spelling oversight!</p>
+<p>To check for spelling differences, we can simply antijoin our two datasets. Antijoining our ecological data with the world data provides us with all countries observed in our ecological data that were not observed in the world data. We can then go through each of the countries listed in the antijoin and compare it with the world data to check if the observation is truly missing or if it’s simply a spelling difference.</p>
+<p>In the code snippet below, you might notice that we’ve recoded country names in both datasets. Why not just recode the country names in the ecological dataset alone? Of course that’s a valid option, but this choice actually doesn’t make sense in our case. For example, in our world dataset, we’ve combined the two entities of <code>Antigua</code> and <code>Barbuda</code> into one entity of <code>Antigua and Barbuda</code>. This is because our ecological data (as well as all other predictor datasets) only have observations for the <strong>joint</strong> Antigua and Barbuda. If we were to perform all recoding in the ecological dataset alone, we’d have to split the observation of Antigua and Barbuda into two — how would you spilt the numbers in your observation? An even split? A proportional split by the size of each region? It’s safe to say that the wiser choice is simply to combine Antigua and Barbuda in our world dataset.</p>
+<pre class="r"><code># Reading in world dataset
+world &lt;- map_data(&quot;world&quot;) %&gt;%
+  dplyr::select(-subregion) 
+
+# Finding countries in common that won't join because of spelling
+spellingErrors &lt;- anti_join(ecoData, world, by = c(&quot;country&quot; = &quot;region&quot;))
+
+# Fixing world names
+world &lt;- world %&gt;%
+  mutate(region = recode(region, 
+                         &quot;Antigua&quot; = &quot;Antigua and Barbuda&quot;,
+                         &quot;Barbuda&quot; = &quot;Antigua and Barbuda&quot;,
+                         &quot;Virgin Islands&quot; = &quot;British Virgin Islands&quot;,
+                         &quot;Brunei&quot; = &quot;Brunei Darussalam&quot;,
+                         &quot;Saint Kitts&quot; = &quot;Saint Kitts and Nevis&quot;,
+                         &quot;Saint Vincent&quot; = &quot;Saint Vincent and Grenadines&quot;,
+                         &quot;Trinidad&quot; = &quot;Trinidad and Tobago&quot;,
+                         &quot;Tobago&quot; = &quot;Trinidad and Tobago&quot;,
+                         &quot;UK&quot; = &quot;United Kingdom&quot;,
+                         &quot;USA&quot; = &quot;United States of America&quot;,
+                         &quot;Wallis and Futuna&quot; = &quot;Wallis and Futuna Islands&quot;))
+
+# Fixing eco names
+ecoData &lt;- ecoData %&gt;%
+  mutate(country = recode(country,
+                          &quot;Cabo Verde&quot; = &quot;Cape Verde&quot;,
+                          &quot;Congo&quot; = &quot;Republic of Congo&quot;,
+                          &quot;Congo, Democratic Republic of&quot; = 
+                            &quot;Democratic Republic of the Congo&quot;,
+                          &quot;Côte d'Ivoire&quot; = &quot;Ivory Coast&quot;,
+                          &quot;Iran, Islamic Republic of&quot; = &quot;Iran&quot;,
+                          &quot;Korea, Democratic People's Republic of&quot; =
+                            &quot;South Korea&quot;,
+                          &quot;Korea, Republic of&quot; = &quot;North Korea&quot;,
+                          &quot;Lao People's Democratic Republic&quot; = &quot;Laos&quot;,
+                          &quot;Libyan Arab Jamahiriya&quot; = &quot;Libya&quot;,
+                          &quot;Macedonia TFYR&quot; = &quot;Macedonia&quot;,
+                          &quot;Réunion&quot; = &quot;Reunion&quot;,
+                          &quot;Russian Federation&quot; = &quot;Russia&quot;,
+                          &quot;Syrian Arab Republic&quot; = &quot;Russia&quot;,
+                          &quot;Tanzania, United Republic of&quot; = &quot;Tanzania&quot;,
+                          &quot;Venezuela, Bolivarian Republic of&quot; =
+                            &quot;Venezuela&quot;,
+                          &quot;Viet Nam&quot; = &quot;Vietnam&quot;))
+
+# Merging eco and world data
+ecoData &lt;- ecoData %&gt;%
+  left_join(world, by = c(&quot;country&quot; = &quot;region&quot;)) %&gt;%
+  dplyr::select(-region)</code></pre>
+</div>
+<div id="production-data" class="section level3">
+<h3>Production Data</h3>
+<pre class="r"><code># Reading in regional data
+production &lt;- read_csv(&quot;production.csv&quot;) %&gt;%
+  replace_na(list(region = &quot;NA&quot;)) %&gt;%
+  group_by(Area, Year) %&gt;%
+  mutate(totalProduction = as.numeric(sum(Production))) %&gt;%
+  filter(Year == 2013) %&gt;%
+  ungroup() %&gt;%
+  distinct(Area, .keep_all = TRUE) %&gt;%
+  dplyr::select(region, Area, totalProduction) %&gt;%
+  rename(&quot;continent&quot; = &quot;region&quot;, &quot;country&quot; = &quot;Area&quot;)
+
+# Finding countries in common with eco Data that won't join because of spelling
+spellingErrors &lt;- anti_join(production, ecoData, by = &quot;country&quot;)
+
+# Fixing names and merging with production data
+## Some countries are missing in eco data so there's nothing we can do about
+## missing observations
+
+## Combining China's total production
+china &lt;- production %&gt;%
+  filter(country %in% c(&quot;China, Hong Kong SAR&quot;, 
+                        &quot;China, Macao SAR&quot;,
+                        &quot;China, mainland&quot;)) %&gt;%
+  mutate(country = recode(country, 
+                          &quot;China, Hong Kong SAR&quot; = &quot;China&quot;,
+                          &quot;China, Macao SAR&quot; = &quot;China&quot;,
+                          &quot;China, mainland&quot; = &quot;China&quot;)) %&gt;%
+  group_by(continent, country) %&gt;%
+  summarise(totalProduction = sum(totalProduction))
+
+## Updating production data
+production &lt;- production %&gt;%
+  filter(!(country %in% c(&quot;China, Hong Kong SAR&quot;, 
+                        &quot;China, Macao SAR&quot;,
+                        &quot;China, mainland&quot;))) %&gt;%
+  full_join(china)
+
+# Fixing names in production data
+production &lt;- production %&gt;%
+  mutate(country = recode(country,
+                          &quot;Bolivia (Plurinational State of)&quot; = &quot;Bolivia&quot;,
+                          &quot;Cabo Verde&quot; = &quot;Cape Verde&quot;,
+                          &quot;Congo&quot; = &quot;Republic of Congo&quot;,
+                          &quot;Czechia&quot; = &quot;Czech Republic&quot;,
+                          &quot;Democratic People's Republic of Korea&quot; =
+                            &quot;South Korea&quot;,
+                          &quot;Iran (Islamic Republic of)&quot; = &quot;Iran&quot;,
+                          &quot;Lao People's Democratic Republic&quot; = &quot;Laos&quot;,
+                          &quot;Republic of Korea&quot; = &quot;North Korea&quot;,
+                          &quot;Republic of Moldova&quot; = &quot;Moldova&quot;,
+                          &quot;Saint Vincent and the Grenadines&quot; =
+                            &quot;Saint Vincent and Grenadines&quot;,
+                          &quot;Russian Federation&quot; = &quot;Russia&quot;,
+                          &quot;The former Yugoslav Republic of Macedonia&quot; =
+                            &quot;Macedonia&quot;,
+                          &quot;United Republic of Tanzania&quot; = &quot;Tanzania&quot;,
+                          &quot;Venezuela (Bolivarian Republic of)&quot; = 
+                            &quot;Venezuela&quot;,
+                          &quot;Viet Nam&quot; = &quot;Vietnam&quot;))
+
+# Merging eco and production data 
+ecoData &lt;- ecoData %&gt;%
+  left_join(production, by = &quot;country&quot;)</code></pre>
+</div>
+<div id="greenhouse-data" class="section level3">
+<h3>Greenhouse Data</h3>
+<pre class="r"><code># Reading in greenhouse gas dataset
+greenhouse &lt;- read_csv(&quot;CAITGHGData.csv&quot;) %&gt;%
+  filter(Year == 2012) %&gt;%
+  rename(&quot;totalGHG&quot; = `Total GHG Emissions Including Land-Use Change and Forestry (MtCO?e?)`) %&gt;%
+  dplyr::select(Country, totalGHG)
+  
+# Finding countries in common that won't join because of spelling
+spellingErrors &lt;- anti_join(greenhouse, ecoData, by = c(&quot;Country&quot; = &quot;country&quot;))
+
+# Fixing names and merging with production data
+## Some countries are missing in eco data so there's nothing we can do about
+## missing observations
+greenhouse &lt;- greenhouse %&gt;%
+  mutate(Country = recode(Country,
+                          &quot;Antigua &amp; Barbuda&quot; = &quot;Antigua and Barbuda&quot;,
+                          &quot;Bahamas, The&quot; = &quot;Bahamas&quot;,
+                          &quot;Bosnia &amp; Herzegovina&quot; = &quot;Bosnia and Herzegovina&quot;,
+                          &quot;Brunei&quot; = &quot;Brunei Darussalam&quot;,
+                          &quot;Congo, Dem. Rep.&quot; = 
+                            &quot;Democratic Republic of the Congo&quot;,
+                          &quot;Congo, Rep.&quot; = &quot;Republic of Congo&quot;,
+                          &quot;Cote d'Ivoire&quot; = &quot;Ivory Coast&quot;,
+                          &quot;Korea, Rep. (South)&quot; = &quot;South Korea&quot;,
+                          &quot;Korea, Dem. Rep. (North)&quot; = &quot;North Korea&quot;,
+                          &quot;Macedonia, FYR&quot; = &quot;Macedonia&quot;,
+                          &quot;Russian Federation&quot; = &quot;Russia&quot;,
+                          &quot;Saint Kitts &amp; Nevis&quot; = &quot;Saint Kitts and Nevis&quot;,
+                          &quot;Saint Vincent &amp; Grenadines&quot; = 
+                            &quot;Saint Vincent and Grenadines&quot;,
+                          &quot;Trinidad &amp; Tobago&quot; = &quot;Trinidad and Tobago&quot;,
+                          &quot;United States&quot; = &quot;United States of America&quot;,
+                          &quot;United States of America&quot; = &quot;USA&quot;))
+
+# Merging greenhouse gas dataset with eco dataset
+ecoData &lt;- ecoData %&gt;%
+  left_join(greenhouse, by = c(&quot;country&quot; = &quot;Country&quot;))</code></pre>
+</div>
+<div id="hdi-data" class="section level3">
+<h3>HDI Data</h3>
+<pre class="r"><code># Reading in HDI data
+HDI &lt;- read_csv(&quot;HDI.csv&quot;) %&gt;%
+  rename(&quot;country&quot; = &quot;Country&quot;,
+         &quot;HDI2015&quot; = `2015`) %&gt;%
+  dplyr::select(country, HDI2015)
+
+# Finding countries in common that won't join because of spelling
+spellingErrors &lt;- anti_join(HDI, ecoData, by = &quot;country&quot;)
+
+# Fixing spelling errors
+HDI &lt;- HDI %&gt;%
+  mutate(country = recode(country,
+         &quot;Bolivia (Plurinational State of)&quot; = &quot;Bolivia&quot;,
+         &quot;Cabo Verde&quot; = &quot;Cape Verde&quot;,
+         &quot;Congo&quot; = &quot;Republic of Congo&quot;,
+         &quot;Congo (Democratic Republic of the)&quot; = 
+           &quot;Democratic Republic of the Congo&quot;,
+         &quot;C&lt;99&gt;te d'Ivoire&quot; = &quot;Ivory Coast&quot;,
+         &quot;Iran (Islamic Republic of)&quot; = &quot;Iran&quot;, 
+         &quot;Korea (Republic of)&quot; = &quot;North Korea&quot;,
+         &quot;Lao People's Democratic Republic&quot; = &quot;Laos&quot;,
+         &quot;Moldova (Republic of)&quot; = &quot;Moldova&quot;,
+         &quot;Russian Federation&quot; = &quot;Russia&quot;,
+         &quot;Saint Vincent and the Grenadines&quot; = 
+           &quot;Saint Vincent and Grenadines&quot;, 
+         &quot;Tanzania (United Republic of)&quot; = &quot;Tanzania&quot;,
+         &quot;The former Yugoslav Republic of Macedonia&quot; = &quot;Macedonia&quot;,
+         &quot;United States&quot; = &quot;United States of America&quot;,
+         &quot;Venezuela (Bolivarian Republic of)&quot; = &quot;Venezuela&quot;,
+         &quot;Viet Nam&quot; = &quot;Vietnam&quot;))
+HDI$country[HDI$HDI2015 == 0.474] &lt;- &quot;Ivory Coast&quot;
+
+# Merging with HDI data
+ecoData &lt;- ecoData %&gt;%
+  left_join(HDI, by = &quot;country&quot;) %&gt;%
+  drop_na() %&gt;%
+  mutate(binomFootprint = as.factor(ifelse(netFootprint &lt; 0, 0, 1))) %&gt;%
+  mutate(transFootprint = log(netFootprint + 15))
+
+# eco data without world map data contained
+## This form of data is better for building our models
+ecoDataReg &lt;- ecoData %&gt;%
+  distinct(country, .keep_all = TRUE) %&gt;%
+  dplyr::select(-lat, -long, -group, -order)
+
+# Saving our final eco datasets
+write_csv(ecoData, &quot;ecoData.csv&quot;)
+write_csv(ecoDataReg, &quot;ecoDataReg.csv&quot;)
+netFootprint &lt;- ecoDataReg$netFootprint
+transFootprint &lt;- ecoDataReg$transFootprint
+binomFootprint &lt;- ecoDataReg$binomFootprint
+population &lt;- ecoDataReg$population
+totalProduction &lt;- ecoDataReg$totalProduction 
+GDPperCapita &lt;- ecoDataReg$GDPperCapita 
+totalGHG &lt;- ecoDataReg$totalGHG 
+HDI2015 &lt;- ecoDataReg$HDI2015 
+ 
+glimpse(ecoDataReg)</code></pre>
+</div>
 </div>
 
 
