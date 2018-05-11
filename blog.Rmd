@@ -14,7 +14,7 @@ A third of all food produced for human consumption --- 1.3 billions tons --- is 
 
 To estimate the entirety of wasted resources and not just food alone, we can use two existing metrics: ecological footprint and biocapacity. Intuitively, ecological footprint is the "amount of nature" required to sustain a given population. This figure might include the amount of land needed to absorb carbon dioxide emissions or the amount of land necessary to grow enough food to feed a population. Biocapacity is the "amount of nature" actually available for consumption needs. For instance, the biocapacity of land accessible for food production might be 1000 hectares in one country, but only 500 hectares in another. A familiar analogy of biocapacity and ecological footprint is supply and demand (respectively), where we're now simply dealing in units of biologically productive land. A country runs an ecological deficit when its footprint exceeds its biocapacity and an ecological surplus when its biocapcity exceeds its footprint. Henceforth, we will simply refer to the ecological deficit/surplus of a nation as its net footprint. 
 
-In this project, we explore, on a country level, the relationship between net footprint and the following variables: 
+In this project, we build two multilevel models --- linear and logistic --- to explore, on a country level, the relationship between net footprint and the following variables: 
 
 * Population
 * GDP per capita
@@ -56,7 +56,7 @@ Our first dataset is the ecological data downloaded from the Global Footprint Ne
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
 # Reading in eco dataset
 ecoData <- read_csv("countries.csv") 
-names(ecoData ) <- gsub(" ", "", names(ecoData )) 
+names(ecoData) <- gsub(" ", "", names(ecoData )) 
 
 # Cleaning up eco dataset
 ecoData  <- ecoData  %>%
@@ -294,12 +294,14 @@ ecoDataReg <- ecoData %>%
   dplyr::select(-lat, -long, -group, -order)
 
 # Saving our final eco datasets
-write_csv(ecoData, "ecoData.csv")
+write_csv(ecoData, "ecoData.csv") 
 write_csv(ecoDataReg, "ecoDataReg.csv")
 ```
 
 
-# Model Assumptions
+# Model Assumptions of Linear Regression
+If you remember from the introduction, we're going to build a linear multilevel model and a logistic multilevel model. But before we can build our linear model, it's crucial that we first check we haven't violated any assumptions of linear regression. First, let's take a look at our $y$ variable, net footprint. 
+
 ```{r, message = FALSE, warning = FALSE, echo = FALSE} 
 # Reading in already finalized datasets so we don't have to run
 # wrangling code every time we knit
@@ -312,43 +314,111 @@ binomFootprint <- ecoDataReg$binomFootprint
 population <- ecoDataReg$population
 totalProduction <- ecoDataReg$totalProduction 
 GDPperCapita <- ecoDataReg$GDPperCapita 
-totalGHG <- ecoDataReg$totalGHG 
+totalGHG <- ecoDataReg$totalGHG  
 HDI2015 <- ecoDataReg$HDI2015 
- 
-glimpse(ecoDataReg)
 ```
 
-
-Before we can build our regression model, it's crucial that we first check that we haven't violated assumptions. First, let's take a look at our $y$ variable:
 ```{r}
-# Frequency of Net Footprint 
-hist(netFootprint, main = "Histogram of Net Footprint", xlab = "Net Footprint")
-summary(netFootprint)
+library(ggplot2)
+
+# Frequency of Net Footprint
+ggplot(data = ecoDataReg, aes(x = netFootprint)) +
+  geom_histogram(binwidth = 1, fill = "#cd8c95", color = "white") +
+  labs(title = "Histogram of Net Footprint", x = "Net Footprint",
+       y = "Frequency") +
+  theme_minimal()
+
+# Range of Net Footprint values 
+range(netFootprint)
 ```
 
-We see that our $y$ variable of net footprint doesn't seem to follow a normal distribution. It's skewed to the right. What we can do to fix this is to take a transformation of our $y$. Let $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
+From our histogram, it seems that net footprint is pretty normally distributed, but there are several extreme outliers. Using `range()` on net footprint tells us that our values lie betwen between -14.14 and 85.08. We can "pull" in our outliers by taking a log transformation our variable. But because we can't take the log of a negative number, we first shift our distribution up by 15 units. Thus, our transformed net footprint variable becomes: $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
 
+Now let's take a look at the histogram of our transformed net footprint variable:
 ```{r}
 # Frequency of Transformed Net Footprint
-hist(transFootprint, main = "Histogram of Transformed Net Footprint",
-     xlab = "Transformed Net Footprint")
+ggplot(data = ecoDataReg, aes(x = log(netFootprint + 15))) +
+  geom_histogram(binwidth = 0.1, fill = "#cd8c95", color = "white") +
+  labs(title = "Histogram of Transformed Net Footprint", 
+       x = "Transformed Net Footprint",
+       y = "Frequency") +
+  theme_minimal()
+
+# Range of Transformed Net Footprint Values
+range(log(netFootprint + 15))
 ```
 
-Now let's check if our $x_{ij}$'s and transformed $y_{i}$ are linearly related.
+From this histogram, we see that although outliers still exist, our log transformation pulled in our previously very extreme outliers. And our transformed net footprint still seems normally distributed! 
+
+Now let's check to see if our transformed net footprint variable and our predictor variables have linear relationships. Let's first take a look at population. Below is a scatterplot of population plotted against our transformed net footprint. 
 
 ```{r}
 # Untransformed X
-plot(population, transFootprint, 
-     main = "Population vs. Transformed Net Footprint",
-     xlab = "Population", ylab = "Transformed Net Footprint")
-
-# Transformed X
-plot(log(population), transFootprint,
-     main = "Transformed Population vs. Transformed Net Footprint",
-     xlab = "log(Population)", ylab = "Transformed Net Footprint")
+ggplot(data = ecoDataReg, aes(x = population, y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Population",
+       x = "Population (millions)", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
 ```
 
-After checking for linear relationships between all of our $x_{ij}$s and transformed $y$, we end up with $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$ where $x_1$ denotes population, $x_2$ denotes GDP per capita, $x_3$ denotes total food production, $x_4$ denotes greenhouse gas emission, and $x_5$ denotes the human development index. It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
+Hmm... Definitely not a linear relationship. Let's try to fix this by taking a log transformation of population since we took a log transformation of net footprint. 
+
+```{r}
+# Transformed X
+ggplot(data = ecoDataReg, aes(x = log(population), y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Transformed Population",
+       x = "Transformed Population", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
+```
+
+We see that taking a log transformation of population seems to remedy the  non-linear relationship between transformed net footprint and transformed population. In fact, after checking the relationships between our transformed $y$ variable and all of our predictors, we end up taking a log transformation of all predictors, as shown below:
+
+```{r}
+# GDP per Capita
+ggplot(data = ecoDataReg, aes(x = log(GDPperCapita), y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Transformed GDP per Capita",
+       x = "Transformed GDP per Capita", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
+
+# Total Food Production
+ggplot(data = ecoDataReg, aes(x = log(totalProduction), y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Transformed Total Food Production",
+       x = "Transformed Total Food Production", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
+
+# Greenhouse Gas Emissions
+ggplot(data = ecoDataReg, aes(x = log(totalGHG), y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Transformed Total GHG Emissions",
+       x = "Transformed Total GHG Emissions", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
+
+# Human Development Index
+ggplot(data = ecoDataReg, aes(x = log(HDI2015), y = transFootprint)) +
+  geom_point(color = "#7289DA", alpha = 0.5) +
+  labs(title = "Transformed Net Footprint vs. Transformed HDI",
+       x = "Transformed HDI", 
+       y = "Transformed Net Footprint") +
+  theme_minimal()
+```
+
+Thus, our linear regression becomes $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$ where
++ $y_i$ denotes the $i^{th}$ observation of net footprint
++ $x_{i1}$ denotes the $i^{th}$ observation of population
++ $x_{i2}$ denotes the $i^{th}$ observation of GDP per capita
++ $x_{i3}$ denotes the $i^{th}$ observation of total food production
++ $x_{i4}$ denotes the $i^{th}$ observation of greenhouse gas emission
++ $x_{i5}$ denotes the $i^{th}$ observation of the human development index. 
+
+It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative. If we were to manipulate 
 
 Now let's check our residual and QQ plots for this model.
 ```{r}
@@ -357,7 +427,30 @@ fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
              log(GDPperCapita) + log(totalGHG) + log(HDI2015), 
            data = ecoDataReg)
 
-# Residual and QQ Plots
+# Adding Residuals to our data frame
+library(modelr) 
+ecoDataReg <- ecoDataReg %>%
+  add_residuals(fit1, var = "resid") %>%
+  add_predictions(fit1, var = "fitted")
+
+# Residual Plot
+ggplot(data = ecoDataReg, aes(x = fitted, y = resid)) +
+  geom_point(color = "#7289DA") +
+  labs(title = "Residual Plot", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+
+# QQ Plot
+ecoDataReg <- ecoDataReg %>%
+  mutate(resid = as.numeric(resid),
+         stdResid = (resid - mean(resid, na.rm = TRUE))/sd(resid, na.rm = TRUE))
+
+ggplot(data = ecoDataReg, aes(x = fitted, y = stdResid)) +
+  geom_point(color = "#7289DA") +
+  labs(title = "Normal Q-Q Plot", 
+       x = "Fitted Values", 
+       y = "Standardized Residuals") +
+  theme_minimal()
+
 plot(fit1, which = c(1,2))
 ```
 
