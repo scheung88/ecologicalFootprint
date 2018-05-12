@@ -463,7 +463,7 @@ summary(normalModel)
 In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for `GDPperCapita`, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources. (Note: we're using these terms very loosely. In reality we're talking about the log(GDP) and log(net footprint + 15), as we derived earlier).
 
 ### Binomial Hierarchical Model
-Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. Thus `binomFootprint` is binomially distributed and we call this model "binomial."
+Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. Thus `binomFootprint` is binomially distributed and we call this model "binomial." We can also remove our log transformations since they were only necessary in our normal model.
 
 ```{r, warning = FALSE, message = FALSE, cache = TRUE}
 binomialModel <- glmer(binomFootprint ~ (1|continent) + 
@@ -515,6 +515,8 @@ ggplot() +
 Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological footprint. The inconclusive results our second chloropleth map are also consistent with the findings in our models. 
 
 # Conclusion
+While our models were unsuccessful in detecting significant relationships between net footprint and our predictor variables (loosely)
+
 try other predictors 
 random effect of continent not necessary
 viz confirms our models
