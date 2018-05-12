@@ -493,7 +493,7 @@ ggplot() +
                         guide = "colorbar", na.value = "white", 
                         name = "Net Ecological Footprint") +
   labs(title = "World Map of Transformed Net Footprint", x = "", y = "") +
-  theme_minimal()
+  theme(legend.position = "bottom")
 ```
 
 If you're confused what this map tells us, unfortunately we're in the same boat. We don't see any distinct countries that immediately flag our attention. In fact, most countries seem to hover between 2 and 3.5 on our net ecological footprint scale. There also don't seem to be significant differences between continents. But this is not so surprising since this is consistent with our models. 
@@ -509,7 +509,7 @@ ggplot() +
   scale_fill_brewer(palette = "Accent", name = "Net Ecological Footprint", 
                     labels = c("Deficit", "Surplus")) +
   labs(title = "World Map of Ecological Deficit/Surplus", x = "", y = "") + 
-  theme_minimal()
+  theme(legend.position = "bottom") 
 ```
 
 Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological footprint. The inconclusive results our second chloropleth map are also consistent with the findings in our models. 
