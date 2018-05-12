@@ -23,14 +23,14 @@ In this project, we build two multilevel models --- linear and logistic --- to e
 * Human Development Index
 * Continent 
 
-Data on net footprint, population, and GDP per capita was collected from the Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). These variables were recorded for the year 2016. The variable of total food production was created using data from the Food and Agriculture Organization of the United Nations (FAO) and also downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data). Unfortunately, data for 2016 was not available; thus, we used the most recent data of 2013. The variable of greenhouse gas emission was collected from the [World Resources Institute](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, the year 2016 was not available and thus we used the most recent year of 2012. Finally, data on the 2015 Human Development Index was collected from the [United Nations Development Programme](http://hdr.undp.org/en/data#). The Human Development Index measures the cultural and social "strength" of a population such as the average life span, level of education, and standard of life. To summarise, 
+Data on net footprint, population, and GDP per capita was collected from the Global Footprint Network and downloaded from [Kaggle](https://www.kaggle.com/footprintnetwork/ecological-footprint). These variables were recorded for the year 2016. The variable of total food production was created using data from the Food and Agriculture Organization of the United Nations (FAO) and also downloaded from [Kaggle](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data). Unfortunately, data for 2016 was not available; thus, we used the most recent data of 2013. The variable of continent was also included in the FAO dataset. The variable of greenhouse gas emission was collected from the [World Resources Institute](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data). Similar to the food production data, the year 2016 was not available and thus we used the most recent year of 2012. Finally, data on the 2015 Human Development Index was collected from the [United Nations Development Programme](http://hdr.undp.org/en/data#). The Human Development Index measures the cultural and social "strength" of a population such as the average life span, level of education, and standard of life. To summarise, 
 
 Variable                  | Type  |  Year  | Source
 ------------------------- | ----- | ------ | ----------
 Net Footprint             |  $y$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
 Population                |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
 GDP per capita            |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
-Continent                 |  $x$  |  2016  | [Global Footprint Network](https://www.kaggle.com/footprintnetwork/ecological-footprint)
+Continent                 |  $x$  |  N/A   | [Food and Agriculture Organization](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data)
 Total food production     |  $x$  |  2013  | [Food and Agriculture Organization](https://www.kaggle.com/unitednations/global-food-agriculture-statistics/data)
 Greenhouse gas emission   |  $x$  |  2012  | [World Resources Institute](http://www.wri.org/resources/data-sets/cait-country-greenhouse-gas-emissions-data)
 Human development index   |  $x$  |  2015  | [United Nations Development Programme](http://hdr.undp.org/en/data#)
@@ -78,7 +78,7 @@ Eventually, we want to create chloropleth maps of net ecological footprint by co
 
 To check for spelling differences, we can simply antijoin our two datasets. Antijoining our ecological data with the world data provides us with all countries observed in our ecological data that were not observed in the world data. We can then go through each of the countries listed in the antijoin and compare it with the world data to check if the observation is truly missing or if it's simply a spelling difference. 
 
-In the code snippet below, you might notice that we've recoded country names in both datasets. Why not just recode the country names in the ecological dataset alone? Of course that's a valid option, but this choice actually doesn't make sense in our case. For example, in our world dataset, we've combined the two entities of `Antigua` and `Barbuda` into one entity of `Antigua and Barbuda`. This is because our ecological data (as well as all other predictor datasets) only have observations for the *joint* entity `Antigua and Barbuda`. If we were to perform all recoding in the ecological dataset alone, we'd have to split our observation of `Antigua and Barbuda` into two --- how would you split the observation? An even split? A proportional split by the size of each region? It's safe to say that the wiser choice is simply to combine Antigua and Barbuda in our world dataset since we're just changing the labels on geographical locations. 
+In the code snippet below, you might notice that we've recoded country names in both datasets. Why not just recode the country names in the ecological dataset alone? Of course that's a valid option, but this choice actually doesn't make sense in our case. For example, in our world dataset, we've combined the two entities of `Antigua` and `Barbuda` into one entity of `Antigua and Barbuda`. This is because our ecological data (as well as all other predictor datasets) only have observations for the *joint* entity `Antigua and Barbuda`. If we were to perform all recoding in the ecological dataset alone, we'd have to split our observation of `Antigua and Barbuda` into two to match the world dataset. But how would you split the joint  observation? An even split? A proportional split by the size of each region? It's safe to say that the wiser choice is simply to combine Antigua and Barbuda in our world dataset since we're just changing the labels on geographical locations. 
 
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
 # Reading in world dataset
@@ -133,7 +133,7 @@ ecoData <- ecoData %>%
 ```
 
 ### Adding Total Food Production Data
-For our production data, the framework of wrangling remains largely the same: reading in the production data, antijoining for spelling differences, then joining with our ecological data. There are, however, several additional steps different from prior wrangling. First, we calculate total food production by summing production across food categories (ie. grains, fruits and vegetables, meat). Second, our antijoin tells us that our production data has three versions of China: `China, Hong Kong SAR`, `China, Macao SAR`, and `China, mainland`. Simply recoding these three versions of China into `China` does not sum their respective food production values. In this case, we must first isolate our three observations of China from the production data, recode and sum our observations before adding our new `China` observation back to the production data. 
+For our production data, the framework of wrangling remains largely the same: reading in the production data, antijoining for spelling differences, then joining with our ecological data. There are, however, several additional steps different from prior wrangling. First, we calculate the total food production of each country by summing production across different food categories (ie. grains, fruits and vegetables, meat). Second, our antijoin tells us that our production data has three versions of China: `China, Hong Kong SAR`, `China, Macao SAR`, and `China, mainland`. Simply recoding these three versions of China into `China` does not sum their respective food production values. Thus, we must first isolate our three observations of China from the production data, recode their identities, and sum their respective production values before adding our new `China` observation back to the production data. 
 
 ```{r, message = FALSE, warning = FALSE, eval = FALSE}
 # Reading in production data and calculating total food production
@@ -283,7 +283,7 @@ ecoData <- ecoData %>%
   mutate(transFootprint = log(netFootprint + 15))
 ```
 
-Now that we're done with wrangling, let's save our work! Since this was a significant amount of wrangling, if we save our final datasets, we wouldn't have to run our code again every time we revisited this blog. 
+Now that we're done with wrangling, let's save our work! Since this was a significant amount of wrangling, if we save our final datasets, we won't have to run our code again every time we revisit this blog. 
 
 ```{r, eval = FALSE}
 # Ecological data without world map data
@@ -300,7 +300,7 @@ write_csv(ecoDataReg, "ecoDataReg.csv")
 
 
 # Model Assumptions of Linear Regression
-If you remember from the introduction, we're going to build a linear multilevel model and a logistic multilevel model. But before we can build our linear model, it's crucial that we first check we haven't violated any assumptions of linear regression. First, let's take a look at our $y$ variable, net footprint. 
+If you remember from the introduction, we're going to build two multi-level models: linear and logistic. But before we can build our linear model, it's crucial that we first check we haven't violated any assumptions of linear regression. First, let's take a look at our $y$ variable, net footprint. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE} 
 # Reading in already finalized datasets so we don't have to run
@@ -332,7 +332,7 @@ ggplot(data = ecoDataReg, aes(x = netFootprint)) +
 range(netFootprint)
 ```
 
-From our histogram, it seems that net footprint is pretty normally distributed, but there are several extreme outliers. Using `range()` on net footprint tells us that our values lie betwen between -14.14 and 85.08. We can "pull" in our outliers by taking a log transformation our variable. But because we can't take the log of a negative number, we first shift our distribution up by 15 units. Thus, our transformed net footprint variable becomes: $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
+From our histogram, it seems that net footprint is pretty normally distributed, but there are several extreme outliers. Using `range()` on net footprint tells us that its values lie betwen between -14.14 and 85.08. We can "pull" in our outliers by taking a log transformation our variable. But because we can't take the log of a negative number, we first shift our distribution up by 15 units (since the lowest value of net footprint is -14.14). So our transformed net footprint variable becomes: $$\text{transFootprint} = \text{log}(\text{netFootprint} + 15)$$
 
 Now let's take a look at the histogram of our transformed net footprint variable:
 ```{r}
@@ -374,7 +374,7 @@ ggplot(data = ecoDataReg, aes(x = log(population), y = transFootprint)) +
   theme_minimal()
 ```
 
-We see that taking a log transformation of population seems to remedy the  non-linear relationship between transformed net footprint and transformed population. In fact, after checking the relationships between our transformed $y$ variable and all of our predictors, we end up taking a log transformation of all predictors, as shown below:
+Great! We see that taking a log transformation of population seems to remedy our previously non-linear relationship. In fact, after checking the relationships between our transformed $y$ variable and all of our predictors, we end up taking a log transformation of all predictors, as shown below:
 
 ```{r, message = FALSE, warning = FALSE}
 # GDP per Capita
@@ -419,9 +419,9 @@ Thus, our linear regression becomes $$\text{log}(y_{i} + 15) = \beta_{0} + \beta
 + $x_{i4}$ denotes the $i^{th}$ observation of greenhouse gas emission
 + $x_{i5}$ denotes the $i^{th}$ observation of the human development index. 
 
-It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
+It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is now multiplicative.
 
-Now let's check the residual and QQ plots of our regression model. We first build our model using the `lm()` command and call it `fit1`. In base R, you can create residual and QQ plots by using `plot(fit1)`. To create these plots in `ggplot`, we can use the `autoplot()` function from the `ggfortify` library. 
+Now let's check the residual and QQ plots of our regression model. We first build our model using the `lm()` command and call it `fit1`. In base R, you can create residual and QQ plots by using `plot(fit1)`. To create these plots in `ggplot2`, we can use the `autoplot()` function from the `ggfortify` library. 
 
 ```{r, warning = FALSE, message = FALSE}
 library(ggfortify)
@@ -440,10 +440,10 @@ autoplot(fit1, which = 2, ncol = 1) +
   theme_minimal()
 ```
 
-Our residual plot seems to be in good shape --- there's even spread and constant variance. There are a few outliers, but we don't observe any pattern in our residuals. While our Normal QQ plot isn't perfect, we see that our points mostly fall on the $y=x$ dotted line, with the exception of the tails. Taking into account all assumptions we tested in this section, it's safe to say we can proceed with building our model!
+Our residual plot seems to be in good shape --- there's even spread and constant variance. There are a few outliers, but we don't observe any pattern in our residuals. While our Normal QQ plot isn't perfect, we see that our points mostly fall on the $y=x$ dotted line, with the exception of the tails. The deviation in the tails is slightly concerning, but taking into account all assumptions we tested in this section, it's safe to say we can proceed with building our model!
 
 # Hierarchical Models
-Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries within continents. Hierarchical models are also called multilevel models (depending on whether you're a Frequentist or a Bayesian and have prior information). To fit hierarchical models in R, the `lme4` package is your best bet.
+Earlier, we mentioned that we were going to build two multi-level models: linear and logistic. In many texts, multi-level models are also called hierarchical models, depending on whether you're a Frequentist or a Bayesian and have prior information. The idea behind multi-level/hierarchical models is in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries within continents. To fit hierarchical models in R, the `lme4` package is your best bet.
 
 ### Normal Hierarchical Model
 Our first hierarchical model is a normal hierarchical model. We call it "normal" because it uses transFootprint as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. You might notice that our regression code tested below is almost identical to the one we already wrote earlier, `fit1`. The only difference is the added measure of continent. Writing continent as (1|continent) adds the multi-level element to our model and tells R that we wish to add continent to our model as a random effect, rather than a fixed one. Using continent as a random effect hypothesizes that our net footprint will vary by continent. 
@@ -464,7 +464,7 @@ summary(normalModel)
 In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for `GDPperCapita`, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources. (Note: we're using these terms very loosely. In reality we're talking about the log(GDP) and log(net footprint + 15), as we derived earlier).
 
 ### Binomial Hierarchical Model
-Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. Thus `binomFootprint` is binomially distributed and we call this model "binomial." We can also remove our log transformations since they were only necessary in our normal model.
+Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's --- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. Thus `binomFootprint` is binomially distributed and we call this model "binomial." We can also remove our log transformations since they were only necessary in our normal model.
 
 ```{r, warning = FALSE, message = FALSE, cache = TRUE}
 binomialModel <- glmer(binomFootprint ~ (1|continent) + 
@@ -478,10 +478,10 @@ binomialModel <- glmer(binomFootprint ~ (1|continent) +
 summary(binomialModel)
 ```
 
-Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is larger than that of our normal model, but it's still quite small. This, again, suggests that adding continent to our model is not the most useful. We also seem to have two significant predictors this time: `GDPperCapita` and `HDI2015`. One hypothesis is that `GDPperCapita` and `HDI2015` may possibly be collinear. The Human Development Index essentially measures whether a country is a first, second, or third world country. Perhaps countries with higher GDP have higher HDI. 
+Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is larger than that of our normal model, but it's still quite small. This, again, suggests that adding continent to our model is not the most useful. We also seem to have two significant predictors this time: `GDPperCapita` and `HDI2015`. One hypothesis is that `GDPperCapita` and `HDI2015` may possibly be collinear. The Human Development Index essentially measures whether a country is a first, second, or third world country. Perhaps countries with higher GDP also have higher HDI. 
 
 # Visualizations
-To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are colored by their respective net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint distributed normally. In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our binomially distributed $y$ is the categorical indicator of either ecological deficit or surplus. 
+To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are colored by their respective net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint that is distributed normally. In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our binomially distributed $y$ is the categorical indicator of either ecological deficit or surplus. 
 
 Below is the first chloropleth: 
 
@@ -492,7 +492,7 @@ ggplot() +
                col = "white") +
   scale_fill_continuous(low = "#dedaea", high = "#ec3093", 
                         guide = "colorbar", na.value = "white", 
-                        name = "Net Ecological Footprint  ") +
+                        name = "Transformed Net Ecological Footprint  ") +
   labs(title = "World Map of Transformed Net Footprint", x = "", y = "") +
   theme(legend.position = "bottom")
 ```
@@ -513,9 +513,9 @@ ggplot() +
   theme(legend.position = "bottom") 
 ```
 
-Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological footprint. The inconclusive results our second chloropleth map are also consistent with the findings in our models. 
+Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological deficit or surplus. Again, we do not seem to have striking differences in footprint between continents. The inconclusive results of our second chloropleth map are also consistent with the findings in our models. 
 
 # Conclusion
-While our models weren't very good, the lack of significant relationships between net footprint and most of our predictor variables is still fascinating. For instance, we hypothesized that total food production would be a strong predictor of net ecological footprint since it measures the amount of resources extracted from the environment. However, this variable was significant in neither models. The clear next step would simply be to test new predictors and their relationship to net ecological footprint. We could also remove the random effect of continent from our models as our results suggested its presence was unnecessary. 
+While our models were unsuccessful in detecting significant relationships between net footprint and most of our predictor variables, the *lack* of significant relationships is still fascinating. For instance, we hypothesized that total food production would be a strong predictor since it measures the agricultural resources extracted from a given environment. However, this variable was significant in neither models. Why is that the case? There are a plethora of scenarios: perhaps aggregrating the total food production by country wasn't wise and we should have kept individual food categories; or we should have taken the relative sizes of countries into account and divided total food production by the respective size of a country; or simply the two variables simply aren't related. 
 
-tie back to food waste and ecosystem
+The clear next step would be to contemplate why our existing predictors weren't significant and then adjust them, as well as test new predictors and their relationships to net ecological footprint. We could also remove the random effect of continent as both our model results and visualizations suggested its presence was unnecessary. 
