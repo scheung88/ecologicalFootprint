@@ -418,54 +418,38 @@ Thus, our linear regression becomes $$\text{log}(y_{i} + 15) = \beta_{0} + \beta
 + $x_{i4}$ denotes the $i^{th}$ observation of greenhouse gas emission
 + $x_{i5}$ denotes the $i^{th}$ observation of the human development index. 
 
-It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative. If we were to manipulate 
+It is important to note that while we have a linear relationship between our transformed $x$'s and $y$, the relationship between our original $x$'s and $y$ is multiplicative.
 
-Now let's check our residual and QQ plots for this model.
-```{r}
+Now let's check the residual and QQ plots of our regression model. We first build our model using the `lm()` command and call it `fit1`. In base R, you can create residual and QQ plots by using `plot(fit1)`. To create these plots in `ggplot`, we can use the `autoplot()` function from the `ggfortify` library. 
+
+```{r, warning = FALSE, message = FALSE}
+library(ggfortify)
+
 # Regression 
 fit1 <- lm(transFootprint ~ log(population) + log(totalProduction) +
              log(GDPperCapita) + log(totalGHG) + log(HDI2015), 
            data = ecoDataReg)
 
-# Adding Residuals to our data frame
-library(modelr) 
-ecoDataReg <- ecoDataReg %>%
-  add_residuals(fit1, var = "resid") %>%
-  add_predictions(fit1, var = "fitted")
-
 # Residual Plot
-ggplot(data = ecoDataReg, aes(x = fitted, y = resid)) +
-  geom_point(color = "#7289DA") +
-  labs(title = "Residual Plot", x = "Fitted Values", y = "Residuals") +
+autoplot(fit1, which = 1, ncol = 1) +
   theme_minimal()
 
-# QQ Plot
-ecoDataReg <- ecoDataReg %>%
-  mutate(resid = as.numeric(resid),
-         stdResid = (resid - mean(resid, na.rm = TRUE))/sd(resid, na.rm = TRUE))
-
-ggplot(data = ecoDataReg, aes(x = fitted, y = stdResid)) +
-  geom_point(color = "#7289DA") +
-  labs(title = "Normal Q-Q Plot", 
-       x = "Fitted Values", 
-       y = "Standardized Residuals") +
+# Normal QQ Plot
+autoplot(fit1, which = 2, ncol = 1) +
   theme_minimal()
-
-plot(fit1, which = c(1,2))
 ```
 
+Our residual plot seems to be in good shape --- there's even spread and constant variance. There are a few outliers, but we don't observe any pattern in our residuals. While our Normal QQ plot isn't perfect, we see that our points mostly fall on the $y=x$ dotted line, with the exception of the tails. Taking into account all assumptions we tested in this section, it's safe to say we can proceed with building our model!
 
 # Hierarchical Models
-Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries and continents. We want to estimate how our net footprint varies by country and continent. To fit hierarchical models in R, the lme4 package is your best bet.
-
-```{r, message = FALSE, warning = FALSE} 
-library(lme4)
-```
+Hierarchical models are in fact quite intuitive. For example, if you have data on students in classrooms and schools, you have a two-level hierarchy: classrooms within schools. If you also have data on school districts, then you have a three-level hierarchy: classrooms within schools within school districts. In this case, we have have a two-level hierarchy: countries within continents. Hierarchical models are also called multilevel models (depending on whether you're a Frequentist or a Bayesian and have prior information). To fit hierarchical models in R, the `lme4` package is your best bet.
 
 ### Normal Hierarchical Model
-Our first hierarchical model is a normal hierarchical model. It uses transFootprint as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. The regression tested below is almost identical to the one we derived above. The only difference is the added level of continent. Writing continent as (1|continent) tells R that we wish to add continent to our model as a random effect, rather than a fixed one.
+Our first hierarchical model is a normal hierarchical model. We call it "normal" because it uses transFootprint as our $y$ variable, which we've assumed to be normally distributed after checking our model assumptions in the prior section. You might notice that our regression code tested below is almost identical to the one we already wrote earlier, `fit1`. The only difference is the added measure of continent. Writing continent as (1|continent) adds the multi-level element to our model and tells R that we wish to add continent to our model as a random effect, rather than a fixed one. Using continent as a random effect hypothesizes that our net footprint will vary by continent. 
 
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE, cache = TRUE}
+library(lme4)
+
 normalModel <- lmer(transFootprint ~ (1|continent) + 
                        log(population) + 
                        log(totalProduction) +
@@ -475,12 +459,13 @@ normalModel <- lmer(transFootprint ~ (1|continent) +
 
 summary(normalModel)
 ```
-In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for GDP, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources.
+
+In the summary output of our normal hierarchical model, we see that the variance of continent is 0.04471, which is quite small. This suggests that adding continent to our model not as helpful as we would have hoped. In addition, all of our predictors, except for `GDPperCapita`, are insignificant. GDP seems to have a negative correlation with net footprint. One hypothesis as to why this may be true is that richer countries may import more goods from other countries and therefore be less taxing their own natural resources. (Note: we're using these terms very loosely. In reality we're talking about the log(GDP) and log(net footprint + 15), as we derived earlier).
 
 ### Binomial Hierarchical Model
-Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into binomFootprint, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. binomFootprint is a categorical variable with a binomial distribution.
+Our second hierarchial model is a binomial hierarchical model. In this case, we've mutated our original $y$ variable of net footprint into `binomFootprint`, which consists of 1's and 0's -- 1 if the country has an ecologicial surplus and 0 if the country has a ecological deficit. Thus `binomFootprint` is binomially distributed and we call this model "binomial."
 
-```{r, warning = FALSE, message = FALSE}
+```{r, warning = FALSE, message = FALSE, cache = TRUE}
 binomialModel <- glmer(binomFootprint ~ (1|continent) + 
                        population + 
                        totalProduction +
@@ -491,27 +476,29 @@ binomialModel <- glmer(binomFootprint ~ (1|continent) +
 
 summary(binomialModel)
 ```
-Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is quite small. This, again, suggests that adding continent to our model is not the most useful. In our predictors, the only significant variable seems to be GDP, which agree with our first model.
+
+Our binomial hierarchical model largely agrees with our normal hierarchical model, though its exact numbers differ. We see that continent has a variance of 0.0745, which is larger than that of our normal model, but it's still quite small. This, again, suggests that adding continent to our model is not the most useful. We also seem to have two significant predictors this time: `GDPperCapita` and `HDI2015`. One hypothesis is that `GDPperCapita` and `HDI2015` may possibly be collinear. The Human Development Index essentially measures whether a country is a first, second, or third world country. Perhaps countries with higher GDP have higher HDI. 
 
 # Visualizations
-```{r, warning = FALSE, message = FALSE} 
-library(ggplot2)
-library(ggthemes)
-```
+To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are colored by their respective net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint distributed normally. In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our binomially distributed $y$ is the categorical indicator of either ecological deficit or surplus. 
 
-To visualize the random effect of continent, we produced two chloropleth maps of the world, where countries are filled in by net footprint. In the first chloropleth, we've filled in countries on a continuous scale, which is the case when our $y$ is the transformed net footprint.
+Below is the first chloropleth: 
 
 ```{r}
 ggplot() + 
   geom_polygon(data = ecoData, 
                aes(x = long, y = lat, fill = transFootprint, group = group),
                col = "white") +
-  scale_fill_continuous(low = "thistle2", high = "darkred", 
+  scale_fill_continuous(low = "#dedaea", high = "#ec3093", 
                         guide = "colorbar", na.value = "white", 
                         name = "Net Ecological Footprint") +
+  labs(title = "World Map of Transformed Net Footprint", x = "", y = "") +
   theme_minimal()
 ```
-In the second chloropleth, we've filled in countries on a discrete scale, which is the case when our $y$ is the categorical indicator of either ecological deficit or surplus.
+
+If you're confused what this map tells us, unfortunately we're in the same boat. We don't see any distinct countries that immediately flag our attention. In fact, most countries seem to hover between 2 and 3.5 on our net ecological footprint scale. There also don't seem to be significant differences between continents. But this is not so surprising since this is consistent with our models. 
+
+Below is the second chloropleth: 
 
 ```{r}
 ggplot() + 
@@ -519,11 +506,16 @@ ggplot() +
                aes(x = long, y = lat, fill = as.factor(binomFootprint), 
                    group = group),
                col = "white") +
-  scale_fill_brewer(palette = "Set2", name = "Net Ecological Footprint", 
-                    labels = c("Deficit", "Reserve")) +
+  scale_fill_brewer(palette = "Accent", name = "Net Ecological Footprint", 
+                    labels = c("Deficit", "Surplus")) +
+  labs(title = "World Map of Ecological Deficit/Surplus", x = "", y = "") + 
   theme_minimal()
 ```
 
+Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological footprint. The inconclusive results our second chloropleth map are also consistent with the findings in our models. 
+
 # Conclusion
 try other predictors 
-hierarchical model not necessary
+random effect of continent not necessary
+viz confirms our models
+tie back to food waste and ecosystem

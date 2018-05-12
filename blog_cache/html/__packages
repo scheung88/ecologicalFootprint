@@ -1,0 +1,11 @@
+base
+readr
+dplyr
+tidyr
+ggplot2
+ggmap
+maps
+ggfortify
+bindrcpp
+Matrix
+lme4
