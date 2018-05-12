@@ -491,7 +491,7 @@ ggplot() +
                col = "white") +
   scale_fill_continuous(low = "#dedaea", high = "#ec3093", 
                         guide = "colorbar", na.value = "white", 
-                        name = "Net Ecological Footprint") +
+                        name = "Net Ecological Footprint  ") +
   labs(title = "World Map of Transformed Net Footprint", x = "", y = "") +
   theme(legend.position = "bottom")
 ```
