@@ -376,7 +376,7 @@ ggplot(data = ecoDataReg, aes(x = log(population), y = transFootprint)) +
 
 We see that taking a log transformation of population seems to remedy the  non-linear relationship between transformed net footprint and transformed population. In fact, after checking the relationships between our transformed $y$ variable and all of our predictors, we end up taking a log transformation of all predictors, as shown below:
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 # GDP per Capita
 ggplot(data = ecoDataReg, aes(x = log(GDPperCapita), y = transFootprint)) +
   geom_point(color = "#7289DA", alpha = 0.5) +
@@ -411,6 +411,7 @@ ggplot(data = ecoDataReg, aes(x = log(HDI2015), y = transFootprint)) +
 ```
 
 Thus, our linear regression becomes $$\text{log}(y_{i} + 15) = \beta_{0} + \beta_{1}log(x_{i1}) + \beta_{2}log(x_{i2}) + \beta_{3}log(x_{i3}) + \beta_{4}log(x_{i4}) + \beta_{5}log(x_{i5})$$ where
+
 + $y_i$ denotes the $i^{th}$ observation of net footprint
 + $x_{i1}$ denotes the $i^{th}$ observation of population
 + $x_{i2}$ denotes the $i^{th}$ observation of GDP per capita
@@ -515,9 +516,6 @@ ggplot() +
 Upon first glance, this map is much easier to read than our first chloropleth as we've replaced our continuous scale with a discrete one. South America seems to run a clear net ecological surplus. Perhaps this is not so surprising as South America is home to lots of wildlife, as well as the great Amazon rainforest. For other continents, however, there does not seem to be a clear winner between ecological footprint. The inconclusive results our second chloropleth map are also consistent with the findings in our models. 
 
 # Conclusion
-While our models were unsuccessful in detecting significant relationships between net footprint and our predictor variables (loosely)
+While our models weren't very good, the lack of significant relationships between net footprint and most of our predictor variables is still fascinating. For instance, we hypothesized that total food production would be a strong predictor of net ecological footprint since it measures the amount of resources extracted from the environment. However, this variable was significant in neither models. The clear next step would simply be to test new predictors and their relationship to net ecological footprint. We could also remove the random effect of continent from our models as our results suggested its presence was unnecessary. 
 
-try other predictors 
-random effect of continent not necessary
-viz confirms our models
 tie back to food waste and ecosystem
